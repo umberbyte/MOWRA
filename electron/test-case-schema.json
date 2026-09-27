@@ -11,12 +11,14 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["viewpointId", "title", "type", "priority", "preconditions", "testData", "steps", "state"],
+        "required": ["viewpointId", "title", "type", "priority", "automationType", "brunoRequestPath", "preconditions", "testData", "steps", "state"],
         "properties": {
           "viewpointId": { "type": "string", "maxLength": 100 },
           "title": { "type": "string", "maxLength": 240 },
           "type": { "type": "string", "enum": ["正常系", "異常系", "境界値", "状態遷移", "探索的"] },
           "priority": { "type": "string", "enum": ["高", "中", "低"] },
+          "automationType": { "type": "string", "enum": ["web", "api", "manual"] },
+          "brunoRequestPath": { "type": "string", "maxLength": 1000 },
           "preconditions": { "type": "string", "maxLength": 1500 },
           "testData": { "type": "string", "maxLength": 1500 },
           "steps": {
@@ -26,13 +28,17 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["actionTarget", "actionLocator", "action", "expectedTarget", "expectedLocator", "expected"],
+              "required": ["actionTarget", "actionLocator", "operation", "actionValue", "action", "expectedTarget", "expectedLocator", "assertion", "expectedValue", "expected"],
               "properties": {
                 "actionTarget": { "type": "string", "maxLength": 240 },
                 "actionLocator": { "type": "string", "maxLength": 500 },
+                "operation": { "type": "string", "enum": ["none", "click", "fill", "select", "check", "press"] },
+                "actionValue": { "type": "string", "maxLength": 1000 },
                 "action": { "type": "string", "maxLength": 1500 },
                 "expectedTarget": { "type": "string", "maxLength": 240 },
                 "expectedLocator": { "type": "string", "maxLength": 500 },
+                "assertion": { "type": "string", "enum": ["visible", "text", "value"] },
+                "expectedValue": { "type": "string", "maxLength": 1000 },
                 "expected": { "type": "string", "maxLength": 1500 }
               }
             }

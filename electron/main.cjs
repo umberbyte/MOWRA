@@ -5,6 +5,7 @@ const { spawn } = require('node:child_process');
 const { sourceAdapters, ALLOWED_EXTENSIONS } = require('./source-adapters.cjs');
 const { analyzeDocuments } = require('./analysis-service.cjs');
 const { generateTestCases } = require('./test-case-service.cjs');
+const { executeAutomation } = require('./automation-service.cjs');
 const { serializeProject, deserializeProject } = require('./project-format.cjs');
 
 const appRoot = path.join(__dirname, '..');
@@ -55,7 +56,7 @@ function createWindow({ smokeTest = false } = {}) {
     icon: path.join(appRoot, 'mowra-app-icons', 'png', 'icon_1024x1024.png'),
     backgroundColor: '#f4f6f2',
     show: false,
-    title: 'MOWRA — テスト観点設計',
+    title: 'MOWRA — AIテスト設計・自動化',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -78,13 +79,15 @@ function createWindow({ smokeTest = false } = {}) {
           referencePicker: typeof window.desktopBridge?.selectReferenceFiles === 'function',
           analyzer: typeof window.desktopBridge?.analyzeFiles === 'function',
           caseGenerator: typeof window.desktopBridge?.generateTestCases === 'function',
+          automationRunner: typeof window.desktopBridge?.executeAutomation === 'function',
           caseWorkspace: Boolean(document.querySelector('#caseWorkspace')),
           caseGenerateButton: Boolean(document.querySelector('#generateCasesBtn')),
+          automationWorkspace: Boolean(document.querySelector('#automationWorkspace')),
           title: document.title,
           providerStatus: document.querySelector('#providerStatus')?.textContent || ''
         }), 400))`);
         console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
-        app.exit(result.bridge && result.filePicker && result.referencePicker && result.analyzer && result.caseGenerator && result.caseWorkspace && result.caseGenerateButton && result.title.startsWith('MOWRA') ? 0 : 1);
+        app.exit(result.bridge && result.filePicker && result.referencePicker && result.analyzer && result.caseGenerator && result.automationRunner && result.caseWorkspace && result.caseGenerateButton && result.automationWorkspace && result.title.startsWith('MOWRA') ? 0 : 1);
       } catch (error) {
         console.error('SMOKE_TEST_FAILED', error);
         app.exit(1);
@@ -168,6 +171,11 @@ ipcMain.handle('files:select-reference', () => selectDocumentFiles({
   title: '標準観点集等の自社ドキュメントを選択', filterName: '対応する自社ドキュメント'
 }));
 
+ipcMain.handle('automation:select-bruno-collection', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Brunoコレクションを選択', properties: ['openDirectory'] });
+  return result.canceled ? null : result.filePaths[0];
+});
+
 function commandAvailable(command) {
   return new Promise((resolve) => {
     const lookup = spawn(process.platform === 'win32' ? 'where.exe' : 'which', [command], { windowsHide: true, shell: false });
@@ -191,6 +199,10 @@ ipcMain.handle('ai:generate-test-cases', async (_event, request) => generateTest
   userDataPath: app.getPath('userData'),
   schemaPath: path.join(__dirname, 'test-case-schema.json'),
   reasoningEffort: 'low'
+}));
+
+ipcMain.handle('automation:execute', async (_event, request) => executeAutomation(request, {
+  userDataPath: app.getPath('userData')
 }));
 
 app.whenReady().then(() => {

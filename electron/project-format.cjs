@@ -8,6 +8,7 @@ const ARRAY_PATHS = new Set([
   'testprj.viewpoints.viewpoint',
   'testprj.testCases.testCase',
   'testprj.testCases.testCase.steps.step',
+  'testprj.automation.results.result',
   'testprj.analysis.questions.question'
 ]);
 
@@ -71,6 +72,8 @@ function serializeProject(project = {}) {
           title: text(testCase.title),
           type: text(testCase.type),
           priority: text(testCase.priority),
+          automationType: text(testCase.automationType || 'web'),
+          brunoRequestPath: text(testCase.brunoRequestPath),
           state: text(testCase.state),
           preconditions: text(testCase.preconditions),
           testData: text(testCase.testData),
@@ -79,9 +82,13 @@ function serializeProject(project = {}) {
               '@_number': index + 1,
               actionTarget: text(step.actionTarget),
               actionLocator: text(step.actionLocator),
+              operation: text(step.operation || 'none'),
+              actionValue: text(step.actionValue),
               action: text(step.action),
               expectedTarget: text(step.expectedTarget),
               expectedLocator: text(step.expectedLocator),
+              assertion: text(step.assertion || 'visible'),
+              expectedValue: text(step.expectedValue),
               expected: text(step.expected)
             }))
           }
@@ -96,6 +103,24 @@ function serializeProject(project = {}) {
       testCaseAnalysis: {
         summary: text(project.testCaseSummary),
         status: text(project.caseGenerationStatus)
+      },
+      automation: {
+        targetUrl: text(project.automationTargetUrl || project.targetUrl),
+        browser: text(project.automationBrowser || 'msedge'),
+        brunoCollectionPath: text(project.brunoCollectionPath),
+        brunoEnvironment: text(project.brunoEnvironment),
+        status: text(project.automationStatus),
+        results: {
+          result: (project.automationResults || []).map((result) => ({
+            '@_testCaseId': text(result.testCaseId),
+            engine: text(result.engine),
+            status: text(result.status),
+            durationMs: Number(result.durationMs) || 0,
+            summary: text(result.summary),
+            details: text(result.details),
+            runAt: text(result.runAt)
+          }))
+        }
       }
     }
   };
@@ -150,11 +175,15 @@ function deserializeProject(xml) {
       id: text(testCase['@_id']), viewpointId: text(testCase['@_viewpointId']),
       title: nodeText(testCase.title), type: nodeText(testCase.type),
       priority: nodeText(testCase.priority), state: nodeText(testCase.state),
+      automationType: nodeText(testCase.automationType) || 'web',
+      brunoRequestPath: nodeText(testCase.brunoRequestPath),
       preconditions: nodeText(testCase.preconditions), testData: nodeText(testCase.testData),
       steps: (testCase.steps?.step || []).map((step) => ({
         actionTarget: nodeText(step.actionTarget), actionLocator: nodeText(step.actionLocator),
+        operation: nodeText(step.operation) || 'none', actionValue: nodeText(step.actionValue),
         action: nodeText(step.action), expectedTarget: nodeText(step.expectedTarget),
-        expectedLocator: nodeText(step.expectedLocator), expected: nodeText(step.expected)
+        expectedLocator: nodeText(step.expectedLocator), assertion: nodeText(step.assertion) || 'visible',
+        expectedValue: nodeText(step.expectedValue), expected: nodeText(step.expected)
       }))
     })),
     analysisSummary: nodeText(root.analysis?.summary),
@@ -162,7 +191,17 @@ function deserializeProject(xml) {
     analysisInputSignature: nodeText(root.analysis?.inputSignature),
     analysisQuestions: (root.analysis?.questions?.question || []).map(nodeText),
     testCaseSummary: nodeText(root.testCaseAnalysis?.summary),
-    caseGenerationStatus: nodeText(root.testCaseAnalysis?.status)
+    caseGenerationStatus: nodeText(root.testCaseAnalysis?.status),
+    automationTargetUrl: nodeText(root.automation?.targetUrl) || nodeText(project.targetUrl),
+    automationBrowser: nodeText(root.automation?.browser) || 'msedge',
+    brunoCollectionPath: nodeText(root.automation?.brunoCollectionPath),
+    brunoEnvironment: nodeText(root.automation?.brunoEnvironment),
+    automationStatus: nodeText(root.automation?.status),
+    automationResults: (root.automation?.results?.result || []).map((result) => ({
+      testCaseId: text(result['@_testCaseId']), engine: nodeText(result.engine),
+      status: nodeText(result.status), durationMs: Number(result.durationMs) || 0,
+      summary: nodeText(result.summary), details: nodeText(result.details), runAt: nodeText(result.runAt)
+    }))
   };
 }
 

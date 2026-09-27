@@ -13,5 +13,7 @@ contextBridge.exposeInMainWorld('desktopBridge', Object.freeze({
   selectReferenceFiles: () => ipcRenderer.invoke('files:select-reference'),
   getAiCapabilities: () => ipcRenderer.invoke('ai:capabilities'),
   analyzeFiles: (request) => ipcRenderer.invoke('ai:analyze-files', request),
-  generateTestCases: (request) => ipcRenderer.invoke('ai:generate-test-cases', request)
+  generateTestCases: (request) => ipcRenderer.invoke('ai:generate-test-cases', request),
+  selectBrunoCollection: () => ipcRenderer.invoke('automation:select-bruno-collection'),
+  executeAutomation: (request) => ipcRenderer.invoke('automation:execute', request)
 }));
