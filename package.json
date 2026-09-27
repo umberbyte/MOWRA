@@ -1,0 +1,16 @@
+{
+  "name": "scopecraft-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-assisted test viewpoint design desktop application",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node scripts/check-renderer.cjs",
+    "package:win": "electron-packager . ScopeCraft --platform=win32 --arch=x64 --out=../../outputs --overwrite --ignore=\"^/(?:work|[.]git|[.]openai|scripts)$\""
+  },
+  "devDependencies": {
+    "@electron/packager": "^19.0.1",
+    "electron": "^44.3.0"
+  }
+}
