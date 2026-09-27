@@ -1,6 +1,9 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
+const { spawn } = require('node:child_process');
+const { sourceAdapters, ALLOWED_EXTENSIONS } = require('./source-adapters.cjs');
+const { analyzeDocuments } = require('./analysis-service.cjs');
 
 const appRoot = path.join(__dirname, '..');
 
@@ -24,7 +27,7 @@ async function readJson(filePath) {
   }
 }
 
-function createWindow() {
+function createWindow({ smokeTest = false } = {}) {
   const window = new BrowserWindow({
     width: 1440,
     height: 920,
@@ -43,7 +46,27 @@ function createWindow() {
 
   window.removeMenu();
   window.loadFile(path.join(appRoot, 'dist', 'index.html'));
-  window.once('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => {
+    if (!smokeTest) window.show();
+  });
+  if (smokeTest) {
+    window.webContents.once('did-finish-load', async () => {
+      try {
+        const result = await window.webContents.executeJavaScript(`new Promise((resolve) => setTimeout(() => resolve({
+          bridge: Boolean(window.desktopBridge && window.desktopBridge.isElectron),
+          filePicker: typeof window.desktopBridge?.selectFiles === 'function',
+          analyzer: typeof window.desktopBridge?.analyzeFiles === 'function',
+          title: document.title,
+          providerStatus: document.querySelector('#providerStatus')?.textContent || ''
+        }), 400))`);
+        console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
+        app.exit(result.bridge && result.filePicker && result.analyzer ? 0 : 1);
+      } catch (error) {
+        console.error('SMOKE_TEST_FAILED', error);
+        app.exit(1);
+      }
+    });
+  }
 }
 
 ipcMain.handle('project:load-autosave', () => readJson(autoSavePath()));
@@ -83,11 +106,45 @@ ipcMain.handle('project:export-csv', async (_event, payload) => {
   return result.filePath;
 });
 
+ipcMain.handle('sources:list', () => Object.values(sourceAdapters).map(({ id, label, available, reason }) => ({ id, label, available, reason })));
+
+ipcMain.handle('files:select', async () => {
+  const result = await dialog.showOpenDialog({
+    title: '分析する顧客資料を選択',
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      { name: '対応するテキスト資料', extensions: [...ALLOWED_EXTENSIONS].map((value) => value.slice(1)) },
+      { name: 'すべてのファイル', extensions: ['*'] }
+    ]
+  });
+  if (result.canceled) return [];
+  return sourceAdapters.local.describe(result.filePaths);
+});
+
+function commandAvailable(command) {
+  return new Promise((resolve) => {
+    const lookup = spawn(process.platform === 'win32' ? 'where.exe' : 'which', [command], { windowsHide: true, shell: false });
+    lookup.on('error', () => resolve(false));
+    lookup.on('close', (code) => resolve(code === 0));
+  });
+}
+
+ipcMain.handle('ai:capabilities', async () => ({
+  codex: await commandAvailable('codex'),
+  claude: await commandAvailable('claude')
+}));
+
+ipcMain.handle('ai:analyze-files', async (_event, request) => analyzeDocuments(request, {
+  userDataPath: app.getPath('userData'),
+  schemaPath: path.join(__dirname, 'analysis-schema.json')
+}));
+
 app.whenReady().then(() => {
   app.setAppUserModelId('jp.scopecraft.desktop');
-  createWindow();
+  const smokeTest = process.argv.includes('--smoke-test');
+  createWindow({ smokeTest });
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0 && !smokeTest) createWindow();
   });
 });
 

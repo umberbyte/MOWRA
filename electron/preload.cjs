@@ -6,5 +6,9 @@ contextBridge.exposeInMainWorld('desktopBridge', Object.freeze({
   saveAutoSave: (project) => ipcRenderer.invoke('project:save-autosave', project),
   openProject: () => ipcRenderer.invoke('project:open'),
   saveProjectAs: (project) => ipcRenderer.invoke('project:save-as', project),
-  exportCsv: (payload) => ipcRenderer.invoke('project:export-csv', payload)
+  exportCsv: (payload) => ipcRenderer.invoke('project:export-csv', payload),
+  listSources: () => ipcRenderer.invoke('sources:list'),
+  selectFiles: () => ipcRenderer.invoke('files:select'),
+  getAiCapabilities: () => ipcRenderer.invoke('ai:capabilities'),
+  analyzeFiles: (request) => ipcRenderer.invoke('ai:analyze-files', request)
 }));

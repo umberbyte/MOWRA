@@ -6,7 +6,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "start": "electron .",
-    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node scripts/check-renderer.cjs",
+    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/source-adapters.cjs && node --check electron/analysis-service.cjs && node scripts/check-renderer.cjs",
     "package:win": "electron-packager . ScopeCraft --platform=win32 --arch=x64 --out=../../outputs --overwrite --ignore=\"^/(?:work|[.]git|[.]openai|scripts)$\""
   },
   "devDependencies": {

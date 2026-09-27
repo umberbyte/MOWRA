@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "viewpoints", "questions"],
+  "properties": {
+    "summary": { "type": "string" },
+    "viewpoints": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["target", "title", "description", "priority", "basis", "state", "question"],
+        "properties": {
+          "target": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "priority": { "type": "string", "enum": ["高", "中", "低"] },
+          "basis": { "type": "string" },
+          "state": { "type": "string", "enum": ["draft", "review"] },
+          "question": { "type": "string" }
+        }
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
