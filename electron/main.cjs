@@ -4,17 +4,18 @@ const fs = require('node:fs/promises');
 const { spawn } = require('node:child_process');
 const { sourceAdapters, ALLOWED_EXTENSIONS } = require('./source-adapters.cjs');
 const { analyzeDocuments } = require('./analysis-service.cjs');
+const { serializeProject, deserializeProject } = require('./project-format.cjs');
 
 const appRoot = path.join(__dirname, '..');
 
 function autoSavePath() {
-  return path.join(app.getPath('userData'), 'current-project.json');
+  return path.join(app.getPath('userData'), 'current-project.testprj');
 }
 
-async function writeJsonAtomic(filePath, value) {
+async function writeTextAtomic(filePath, value) {
   const temporaryPath = `${filePath}.tmp`;
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(temporaryPath, JSON.stringify(value, null, 2), 'utf8');
+  await fs.writeFile(temporaryPath, value, 'utf8');
   await fs.rename(temporaryPath, filePath);
 }
 
@@ -25,6 +26,24 @@ async function readJson(filePath) {
     if (error.code === 'ENOENT') return null;
     throw error;
   }
+}
+
+async function readProject(filePath) {
+  const raw = await fs.readFile(filePath, 'utf8');
+  return path.extname(filePath).toLowerCase() === '.testprj' ? deserializeProject(raw) : JSON.parse(raw);
+}
+
+async function loadAutoSave() {
+  try {
+    return await readProject(autoSavePath());
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    return readJson(path.join(app.getPath('userData'), 'current-project.json'));
+  }
+}
+
+async function saveProjectFile(filePath, project) {
+  await writeTextAtomic(filePath, serializeProject(project));
 }
 
 function createWindow({ smokeTest = false } = {}) {
@@ -69,28 +88,31 @@ function createWindow({ smokeTest = false } = {}) {
   }
 }
 
-ipcMain.handle('project:load-autosave', () => readJson(autoSavePath()));
-ipcMain.handle('project:save-autosave', (_event, project) => writeJsonAtomic(autoSavePath(), project));
+ipcMain.handle('project:load-autosave', () => loadAutoSave());
+ipcMain.handle('project:save-autosave', (_event, project) => saveProjectFile(autoSavePath(), project));
 
 ipcMain.handle('project:open', async () => {
   const result = await dialog.showOpenDialog({
     title: 'ScopeCraft案件を開く',
     properties: ['openFile'],
-    filters: [{ name: 'ScopeCraft案件', extensions: ['scopecraft', 'json'] }]
+    filters: [
+      { name: 'ScopeCraft案件', extensions: ['testprj'] },
+      { name: '旧ScopeCraft案件', extensions: ['scopecraft', 'json'] }
+    ]
   });
   if (result.canceled || !result.filePaths[0]) return null;
-  return { project: await readJson(result.filePaths[0]), filePath: result.filePaths[0] };
+  return { project: await readProject(result.filePaths[0]), filePath: result.filePaths[0] };
 });
 
 ipcMain.handle('project:save-as', async (_event, project) => {
   const safeName = String(project.projectName || 'test-project').replace(/[\\/:*?"<>|]/g, '-');
   const result = await dialog.showSaveDialog({
     title: 'ScopeCraft案件を保存',
-    defaultPath: `${safeName}.scopecraft`,
-    filters: [{ name: 'ScopeCraft案件', extensions: ['scopecraft'] }]
+    defaultPath: `${safeName}.testprj`,
+    filters: [{ name: 'ScopeCraft案件（XML）', extensions: ['testprj'] }]
   });
   if (result.canceled || !result.filePath) return null;
-  await writeJsonAtomic(result.filePath, project);
+  await saveProjectFile(result.filePath, project);
   return result.filePath;
 });
 
@@ -113,7 +135,7 @@ ipcMain.handle('files:select', async () => {
     title: '分析する顧客資料を選択',
     properties: ['openFile', 'multiSelections'],
     filters: [
-      { name: '対応するテキスト資料', extensions: [...ALLOWED_EXTENSIONS].map((value) => value.slice(1)) },
+      { name: '対応する顧客資料', extensions: [...ALLOWED_EXTENSIONS].map((value) => value.slice(1)) },
       { name: 'すべてのファイル', extensions: ['*'] }
     ]
   });
