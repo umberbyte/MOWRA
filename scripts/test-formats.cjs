@@ -6,7 +6,7 @@ const XLSX = require('xlsx');
 const { zipSync, strToU8 } = require('fflate');
 const { serializeProject, deserializeProject } = require('../electron/project-format.cjs');
 const { sourceAdapters } = require('../electron/source-adapters.cjs');
-const { buildPrompt, compactText, CUSTOMER_PROMPT_BUDGET, REFERENCE_PROMPT_BUDGET, MAX_VIEWPOINTS } = require('../electron/analysis-service.cjs');
+const { buildPrompt, compactText, formatDecisionQuestion, CUSTOMER_PROMPT_BUDGET, REFERENCE_PROMPT_BUDGET, MAX_VIEWPOINTS } = require('../electron/analysis-service.cjs');
 const { generateTestCases, buildTestCasePrompt, normalizeTestCaseResult, FAST_BATCH_SIZE } = require('../electron/test-case-service.cjs');
 const { executeAutomation, validateAutomationCase, locatorCode, buildPlaywrightCode } = require('../electron/automation-service.cjs');
 const { windowsCandidates } = require('../electron/cli-resolver.cjs');
@@ -82,6 +82,8 @@ async function run() {
   assert.ok(largePrompt.length < CUSTOMER_PROMPT_BUDGET + REFERENCE_PROMPT_BUDGET + 10_000);
   assert.match(largePrompt, /ログインできる/);
   assert.equal(MAX_VIEWPOINTS, 12);
+  assert.match(formatDecisionQuestion('完了通知はメールも必要ですか。', { title: '受付完了を確認できる' }), /確認すること:[\s\S]*確認理由:[\s\S]*未回答時のAI仮定:/);
+  assert.equal(formatDecisionQuestion(''), '');
   const agreedViewpoint = { ...sample.items[0], state: 'agreed' };
   const casePrompt = buildTestCasePrompt({ viewpoints: [agreedViewpoint], project: sample });
   assert.match(casePrompt, /合意済み観点/);

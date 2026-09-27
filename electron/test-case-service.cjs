@@ -25,7 +25,7 @@ ${JSON.stringify(compactViewpoints)}
 - ロケーターは getByRole(..., { name: ..., exact: true })、getByLabel(..., { exact: true })、getByTestId(...)、一意なidの順で優先する。button、.btn、部分一致テキストだけの曖昧な指定は禁止する。
 - actionTarget/actionLocatorは操作する部品、expectedTarget/expectedLocatorは期待結果を観察する部品またはテキストを示す。
 - operationはnone/click/fill/select/check/press、actionValueは入力値・選択値・キーを記載する。assertionはvisible/text/value、expectedValueは比較値を記載する。
-- ロケーター、操作種別、操作値、検証種別、期待値は90%以上をAIで具体的に推定する。DOMの確証がなくても、対象名から最も可能性の高いアクセシブルなロケーター候補を記載する。
+- ロケーター、操作種別、操作値、検証種別、期待値をAIで全て具体的に推定する。DOMの確証がなくても、対象名から最も可能性の高いアクセシブルなロケーター候補を記載する。
 - 「要確認」、空の操作値、operation=noneは原則として使わない。fillにはメールアドレス、氏名、電話番号、検索語、数量など対象に合う安全な代表値を設定する。
 - AI推定したWebケースはstateをdraftにする。一意性は後続のPlaywright実行前チェックで検証し、本当に推定不能な少数だけreviewにする。
 - 画面操作はautomationTypeをwebにする。API検証はapiにし、既存Brunoコレクションの相対.bruパスが資料にあればbrunoRequestPathへ記載する。不明なら「要確認: Brunoリクエスト相対パス」としてstateをreviewにする。自動化対象外はmanualにする。
@@ -83,7 +83,7 @@ function normalizeTestCaseResult(result, viewpoints) {
     if (seen.has(viewpointId)) return null;
     seen.add(viewpointId);
     if (!Array.isArray(item.steps) || item.steps.length === 0) throw new Error(`テストケース${caseIndex + 1}の手順がありません`);
-    const automationType = automationTypes.has(item.automationType) ? item.automationType : 'manual';
+    const automationType = automationTypes.has(item.automationType) ? item.automationType : 'web';
     let locatorNeedsReview = false;
     const normalizeLocator = (value, label, target, operation, actionText) => {
       let locator = typeof value === 'string' ? value.trim().slice(0, 500) : '';

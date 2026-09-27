@@ -89,13 +89,15 @@ function buildPrompt({ customerDocuments, referenceDocuments, project, existingV
 - 自社ドキュメント由来の観点は案件への適用可否を判断し、根拠不足ならstateをreviewにして顧客確認事項をquestionへ記載する。
 - 資料に明記された事実と、UX・一般的期待からの仮説を区別する。
 - 根拠が不足する期待は断定せず、stateをreviewにしてquestionを記載する。
+- questionは顧客が判断すべき場合だけ記載し、必ず「確認すること: ...\n確認理由: ...\n未回答時のAI仮定: ...」の3行にする。確認することは一つの判断に絞り、選択肢または具体的な回答例を含める。
+- AIで一般的な動作を妥当に推定できる場合はquestionを空文字にし、その推定をdescriptionへ反映する。質問はテスト設計を進められない場合に限定する。
 - 同値分割、境界値、状態遷移、エラー推測を適用できる箇所を考慮する。
 - 実装の現状を正しい期待結果とみなさない。
 - titleは「〜できる」のように検証目的が分かる表現にする。
 - basisには資料名を記載し、標準観点集等の自社ドキュメントを使った場合は「参考: ファイル名」の形式にする。その他は「UX指針からの仮説」と記載する。
 - 重要度の高い中核観点を6〜12件に絞り、似た観点を統合する。
 - 既存観点と同じ目的の観点は生成しない。既存観点: ${JSON.stringify(existingTitles)}
-- summaryは1文、questionsは最大8件にする。
+- summaryは1文にする。questionsは全観点に共通し、テスト設計を進めるため不可欠な確認だけを最大3件とし、questionと同じ3行形式にする。該当しなければ空配列にする。
 
 顧客資料:
 ${customerText}
@@ -107,6 +109,18 @@ ${referenceText}`;
 function parseJsonText(value) {
   const trimmed = String(value || '').trim().replace(/^```json\s*/i, '').replace(/\s*```$/, '');
   return JSON.parse(trimmed);
+}
+
+function formatDecisionQuestion(value, item = {}) {
+  const question = String(value || '').trim().slice(0, 1000);
+  if (!question) return '';
+  if (/確認すること\s*[:：]/.test(question) && /確認理由\s*[:：]/.test(question) && /未回答時のAI仮定\s*[:：]/.test(question)) return question;
+  const title = String(item.title || item.target || 'この観点').trim();
+  return [
+    `確認すること: ${question}`,
+    `確認理由: 「${title}」の期待結果を顧客と確定するため`,
+    '未回答時のAI仮定: 一般的なWebユーザビリティと主要利用者の期待に従う'
+  ].join('\n').slice(0, 1000);
 }
 
 function normalizeResult(result) {
@@ -126,13 +140,13 @@ function normalizeResult(result) {
       priority: priorities.has(item.priority) ? item.priority : '中',
       basis: text('basis', 500),
       state: states.has(item.state) ? item.state : 'review',
-      question: typeof item.question === 'string' ? item.question.trim().slice(0, 1000) : ''
+      question: formatDecisionQuestion(item.question, item)
     };
   });
   return {
     summary: typeof result.summary === 'string' ? result.summary.trim().slice(0, 500) : '',
     viewpoints,
-    questions: Array.isArray(result.questions) ? result.questions.filter((value) => typeof value === 'string').map((value) => value.trim().slice(0, 500)).slice(0, 8) : []
+    questions: Array.isArray(result.questions) ? result.questions.filter((value) => typeof value === 'string' && value.trim()).map((value) => formatDecisionQuestion(value)).slice(0, 3) : []
   };
 }
 
@@ -181,4 +195,4 @@ async function analyzeDocuments(request, runtime) {
   return normalizeResult(result);
 }
 
-module.exports = { analyzeDocuments, buildPrompt, parseJsonText, normalizeResult, invokeStructuredAi, compactText, CUSTOMER_PROMPT_BUDGET, REFERENCE_PROMPT_BUDGET, MAX_VIEWPOINTS };
+module.exports = { analyzeDocuments, buildPrompt, parseJsonText, normalizeResult, formatDecisionQuestion, invokeStructuredAi, compactText, CUSTOMER_PROMPT_BUDGET, REFERENCE_PROMPT_BUDGET, MAX_VIEWPOINTS };
