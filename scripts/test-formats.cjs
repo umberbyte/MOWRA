@@ -47,6 +47,7 @@ async function run() {
   const cliCandidates = windowsCandidates('codex', { LOCALAPPDATA: 'C:\\Local', APPDATA: 'C:\\Roaming', MOWRA_CODEX_PATH: 'C:\\Tools\\codex.exe' });
   assert.equal(cliCandidates[0], 'C:\\Tools\\codex.exe');
   assert.ok(cliCandidates.includes(path.join('C:\\Roaming', 'npm', 'codex.cmd')));
+  assert.equal(windowsCandidates('bruno-mcp', { MOWRA_BRUNO_MCP_PATH: 'C:\\Tools\\bruno-mcp.cmd' })[0], 'C:\\Tools\\bruno-mcp.cmd');
   const sample = {
     projectName: '案件 & <確認>', targetUrl: 'https://example.jp/?a=1&b=2', mode: 'ambiguous', activeStage: 'cases',
     focus: 'general', filter: 'review', aiProvider: 'codex', context: '顧客の説明\n2行目',

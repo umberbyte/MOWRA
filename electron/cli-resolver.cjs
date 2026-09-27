@@ -3,7 +3,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 
 function windowsCandidates(command, env = process.env) {
-  const upper = command.toUpperCase();
+  const upper = command.toUpperCase().replace(/[^A-Z0-9]/g, '_');
   const candidates = [];
   if (env[`MOWRA_${upper}_PATH`]) candidates.push(env[`MOWRA_${upper}_PATH`]);
   if (command === 'codex' && env.LOCALAPPDATA) {
