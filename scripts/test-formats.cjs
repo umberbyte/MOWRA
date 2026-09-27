@@ -7,7 +7,7 @@ const { zipSync, strToU8 } = require('fflate');
 const { serializeProject, deserializeProject } = require('../electron/project-format.cjs');
 const { sourceAdapters } = require('../electron/source-adapters.cjs');
 const { buildPrompt } = require('../electron/analysis-service.cjs');
-const { generateTestCases, buildTestCasePrompt, normalizeTestCaseResult } = require('../electron/test-case-service.cjs');
+const { generateTestCases, buildTestCasePrompt, normalizeTestCaseResult, FAST_BATCH_SIZE } = require('../electron/test-case-service.cjs');
 
 function writeMinimalPdf(filePath) {
   const objects = [
@@ -67,8 +67,8 @@ async function run() {
   assert.match(prompt, /当該案件の仕様や合意事項とはみなさない/);
   const agreedViewpoint = { ...sample.items[0], state: 'agreed' };
   const casePrompt = buildTestCasePrompt({ viewpoints: [agreedViewpoint], project: sample });
-  assert.match(casePrompt, /合意済みのテスト観点/);
-  assert.match(casePrompt, /viewpoint id="VP-001"/);
+  assert.match(casePrompt, /合意済み観点/);
+  assert.match(casePrompt, /\["VP-001","画面","操作 & 応答"/);
   assert.deepEqual(normalizeTestCaseResult({ summary: '設計完了', testCases: [{
     viewpointId: 'VP-001', title: '有効な値で完了できる', type: '正常系', priority: '高',
     preconditions: 'ログイン済み', testData: '有効な値', state: 'draft',
@@ -81,10 +81,10 @@ async function run() {
   let batchCalls = 0;
   const batched = await generateTestCases({ provider: 'codex', confirmedExternalTransmission: true, viewpoints: manyViewpoints, project: sample }, {}, async (_provider, _prompt, _runtime, batch) => {
     batchCalls++;
-    assert.ok(batch.length <= 4);
+    assert.ok(batch.length <= FAST_BATCH_SIZE);
     return { summary: `batch ${batchCalls}`, testCases: batch.map((viewpoint) => ({ viewpointId: viewpoint.id, title: `${viewpoint.id}のケース`, type: '正常系', priority: '高', preconditions: '前提', testData: 'データ', state: 'draft', steps: [{ action: '操作', expected: '結果' }] })) };
   });
-  assert.equal(batchCalls, 5);
+  assert.equal(batchCalls, 2);
   assert.equal(batched.testCases.length, 20);
 
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mowra-formats-'));

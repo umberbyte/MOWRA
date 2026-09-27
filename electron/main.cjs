@@ -188,7 +188,8 @@ ipcMain.handle('ai:analyze-files', async (_event, request) => analyzeDocuments(r
 
 ipcMain.handle('ai:generate-test-cases', async (_event, request) => generateTestCases(request, {
   userDataPath: app.getPath('userData'),
-  schemaPath: path.join(__dirname, 'test-case-schema.json')
+  schemaPath: path.join(__dirname, 'test-case-schema.json'),
+  reasoningEffort: 'low'
 }));
 
 app.whenReady().then(() => {

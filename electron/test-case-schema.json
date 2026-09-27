@@ -4,7 +4,7 @@
   "additionalProperties": false,
   "required": ["summary", "testCases"],
   "properties": {
-    "summary": { "type": "string" },
+    "summary": { "type": "string", "maxLength": 500 },
     "testCases": {
       "type": "array",
       "maxItems": 60,
@@ -13,23 +13,23 @@
         "additionalProperties": false,
         "required": ["viewpointId", "title", "type", "priority", "preconditions", "testData", "steps", "state"],
         "properties": {
-          "viewpointId": { "type": "string" },
-          "title": { "type": "string" },
+          "viewpointId": { "type": "string", "maxLength": 100 },
+          "title": { "type": "string", "maxLength": 240 },
           "type": { "type": "string", "enum": ["正常系", "異常系", "境界値", "状態遷移", "探索的"] },
           "priority": { "type": "string", "enum": ["高", "中", "低"] },
-          "preconditions": { "type": "string" },
-          "testData": { "type": "string" },
+          "preconditions": { "type": "string", "maxLength": 1500 },
+          "testData": { "type": "string", "maxLength": 1500 },
           "steps": {
             "type": "array",
             "minItems": 1,
-            "maxItems": 20,
+            "maxItems": 5,
             "items": {
               "type": "object",
               "additionalProperties": false,
               "required": ["action", "expected"],
               "properties": {
-                "action": { "type": "string" },
-                "expected": { "type": "string" }
+                "action": { "type": "string", "maxLength": 1500 },
+                "expected": { "type": "string", "maxLength": 1500 }
               }
             }
           },

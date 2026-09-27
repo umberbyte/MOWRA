@@ -115,8 +115,9 @@ async function analyzeWithCodex(prompt, runtime) {
   await fs.mkdir(runtimeDir, { recursive: true });
   const schemaPath = path.join(runtimeDir, 'analysis-schema.json');
   await fs.copyFile(runtime.schemaPath, schemaPath);
+  const reasoningArgs = runtime.reasoningEffort ? ['-c', `model_reasoning_effort="${runtime.reasoningEffort}"`] : [];
   const result = await runProcess('codex', [
-    'exec', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only',
+    'exec', ...reasoningArgs, '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only',
     '--output-schema', schemaPath, '--color', 'never', '-'
   ], prompt, { cwd: runtimeDir });
   return parseJsonText(result.stdout);
