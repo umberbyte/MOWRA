@@ -7,6 +7,7 @@ const { zipSync, strToU8 } = require('fflate');
 const { serializeProject, deserializeProject } = require('../electron/project-format.cjs');
 const { sourceAdapters } = require('../electron/source-adapters.cjs');
 const { buildPrompt } = require('../electron/analysis-service.cjs');
+const { buildTestCasePrompt, normalizeTestCaseResult } = require('../electron/test-case-service.cjs');
 
 function writeMinimalPdf(filePath) {
   const objects = [
@@ -42,13 +43,14 @@ function writeMinimalPptx(filePath) {
 
 async function run() {
   const sample = {
-    projectName: '案件 & <確認>', targetUrl: 'https://example.jp/?a=1&b=2', mode: 'ambiguous',
+    projectName: '案件 & <確認>', targetUrl: 'https://example.jp/?a=1&b=2', mode: 'ambiguous', activeStage: 'cases',
     focus: 'general', filter: 'review', aiProvider: 'codex', context: '顧客の説明\n2行目',
     sources: ['現行画面', 'UX指針'],
     inputFiles: [{ id: 'f1', name: '仕様.xlsx', path: 'C:\\案件\\仕様.xlsx', extension: '.xlsx', size: 123, sourceType: 'local-file' }],
     referenceFiles: [{ id: 'r1', name: '社内観点集.pdf', path: 'C:\\標準\\社内観点集.pdf', extension: '.pdf', size: 456, sourceType: 'local-file' }],
     items: [{ id: 'VP-001', target: '画面', title: '操作 & 応答', description: '期待どおり', basis: 'UX指針', priority: '高', state: 'review', question: '確認？' }],
-    analysisSummary: '要約', analysisQuestions: ['質問1', '質問2']
+    testCases: [{ id: 'TC-001', viewpointId: 'VP-001', title: '正常に操作できる', type: '正常系', priority: '高', state: 'draft', preconditions: 'ログイン済み', testData: '有効な値', steps: [{ action: 'ボタンを押す', expected: '完了が表示される' }] }],
+    analysisSummary: '要約', analysisQuestions: ['質問1', '質問2'], testCaseSummary: 'ケース要約'
   };
   const xml = serializeProject(sample);
   assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
@@ -63,6 +65,18 @@ async function run() {
   assert.match(prompt, /<company-reference[^>]+社内観点集\.pdf[^>]*>[\s\S]*再利用する観点/);
   assert.match(prompt, /標準観点集等の自社ドキュメント/);
   assert.match(prompt, /当該案件の仕様や合意事項とはみなさない/);
+  const agreedViewpoint = { ...sample.items[0], state: 'agreed' };
+  const casePrompt = buildTestCasePrompt({ viewpoints: [agreedViewpoint], project: sample });
+  assert.match(casePrompt, /合意済みのテスト観点/);
+  assert.match(casePrompt, /viewpoint id="VP-001"/);
+  assert.deepEqual(normalizeTestCaseResult({ summary: '設計完了', testCases: [{
+    viewpointId: 'VP-001', title: '有効な値で完了できる', type: '正常系', priority: '高',
+    preconditions: 'ログイン済み', testData: '有効な値', state: 'draft',
+    steps: [{ action: '値を入力する', expected: '値が入力欄に表示される' }]
+  }] }, [agreedViewpoint]), {
+    summary: '設計完了',
+    testCases: [{ viewpointId: 'VP-001', title: '有効な値で完了できる', type: '正常系', priority: '高', preconditions: 'ログイン済み', testData: '有効な値', state: 'draft', steps: [{ action: '値を入力する', expected: '値が入力欄に表示される' }] }]
+  });
 
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mowra-formats-'));
   try {

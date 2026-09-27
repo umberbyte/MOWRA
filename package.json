@@ -1,12 +1,12 @@
 {
   "name": "mowra-desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "AI-assisted test viewpoint design desktop application",
   "main": "electron/main.cjs",
   "scripts": {
     "start": "electron .",
-    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/source-adapters.cjs && node --check electron/project-format.cjs && node --check electron/analysis-service.cjs && node scripts/check-renderer.cjs",
+    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/source-adapters.cjs && node --check electron/project-format.cjs && node --check electron/analysis-service.cjs && node --check electron/test-case-service.cjs && node scripts/check-renderer.cjs",
     "test:formats": "node scripts/test-formats.cjs",
     "package:win": "electron-packager . MOWRA --platform=win32 --arch=x64 --out=release --overwrite --icon=mowra-app-icons/win/icon.ico --ignore=\"^/(?:release|work|[.]git|[.]openai|scripts)$\"",
     "package:mac": "npm run package:mac:arm64 && npm run package:mac:x64",

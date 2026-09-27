@@ -6,6 +6,8 @@ const ARRAY_PATHS = new Set([
   'testprj.inputFiles.file',
   'testprj.referenceFiles.file',
   'testprj.viewpoints.viewpoint',
+  'testprj.testCases.testCase',
+  'testprj.testCases.testCase.steps.step',
   'testprj.analysis.questions.question'
 ]);
 
@@ -23,6 +25,7 @@ function serializeProject(project = {}) {
         mode: text(project.mode || 'ambiguous'),
         focus: text(project.focus || 'general'),
         activeFilter: text(project.filter || 'all'),
+        activeStage: text(project.activeStage || 'viewpoints'),
         aiProvider: text(project.aiProvider || 'codex'),
         context: text(project.context)
       },
@@ -59,10 +62,30 @@ function serializeProject(project = {}) {
           question: text(item.question)
         }))
       },
+      testCases: {
+        testCase: (project.testCases || []).map((testCase) => ({
+          '@_id': text(testCase.id),
+          '@_viewpointId': text(testCase.viewpointId),
+          title: text(testCase.title),
+          type: text(testCase.type),
+          priority: text(testCase.priority),
+          state: text(testCase.state),
+          preconditions: text(testCase.preconditions),
+          testData: text(testCase.testData),
+          steps: {
+            step: (testCase.steps || []).map((step, index) => ({
+              '@_number': index + 1,
+              action: text(step.action),
+              expected: text(step.expected)
+            }))
+          }
+        }))
+      },
       analysis: {
         summary: text(project.analysisSummary),
         questions: { question: (project.analysisQuestions || []).map((question) => ({ '#text': text(question) })) }
-      }
+      },
+      testCaseAnalysis: { summary: text(project.testCaseSummary) }
     }
   };
   const builder = new XMLBuilder({ ignoreAttributes: false, format: true, suppressEmptyNode: false });
@@ -91,6 +114,7 @@ function deserializeProject(xml) {
     mode: nodeText(project.mode) || 'ambiguous',
     focus: nodeText(project.focus) || 'general',
     filter: nodeText(project.activeFilter) || 'all',
+    activeStage: nodeText(project.activeStage) || 'viewpoints',
     aiProvider: nodeText(project.aiProvider) || 'codex',
     context: nodeText(project.context),
     sources: (root.sources?.source || []).map(nodeText),
@@ -109,8 +133,18 @@ function deserializeProject(xml) {
       description: nodeText(item.description), basis: nodeText(item.basis),
       priority: nodeText(item.priority), state: nodeText(item.state), question: nodeText(item.question)
     })),
+    testCases: (root.testCases?.testCase || []).map((testCase) => ({
+      id: text(testCase['@_id']), viewpointId: text(testCase['@_viewpointId']),
+      title: nodeText(testCase.title), type: nodeText(testCase.type),
+      priority: nodeText(testCase.priority), state: nodeText(testCase.state),
+      preconditions: nodeText(testCase.preconditions), testData: nodeText(testCase.testData),
+      steps: (testCase.steps?.step || []).map((step) => ({
+        action: nodeText(step.action), expected: nodeText(step.expected)
+      }))
+    })),
     analysisSummary: nodeText(root.analysis?.summary),
-    analysisQuestions: (root.analysis?.questions?.question || []).map(nodeText)
+    analysisQuestions: (root.analysis?.questions?.question || []).map(nodeText),
+    testCaseSummary: nodeText(root.testCaseAnalysis?.summary)
   };
 }
 

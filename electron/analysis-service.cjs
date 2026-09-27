@@ -133,6 +133,12 @@ async function analyzeWithClaude(prompt, runtime) {
   return parseJsonText(wrapper.result);
 }
 
+async function invokeStructuredAi(provider, prompt, runtime) {
+  return provider === 'codex'
+    ? analyzeWithCodex(prompt, runtime)
+    : analyzeWithClaude(prompt, runtime);
+}
+
 async function analyzeDocuments(request, runtime) {
   if (!request.confirmedExternalTransmission) throw new Error('AIサービスへの文書送信確認が必要です');
   if (!['codex', 'claude'].includes(request.provider)) throw new Error('未対応のAIプロバイダーです');
@@ -143,10 +149,8 @@ async function analyzeDocuments(request, runtime) {
   const customerDocuments = documents.slice(0, customerFiles.length);
   const referenceDocuments = documents.slice(customerFiles.length);
   const prompt = buildPrompt({ customerDocuments, referenceDocuments, project: request.project || {} });
-  const result = request.provider === 'codex'
-    ? await analyzeWithCodex(prompt, runtime)
-    : await analyzeWithClaude(prompt, runtime);
+  const result = await invokeStructuredAi(request.provider, prompt, runtime);
   return normalizeResult(result);
 }
 
-module.exports = { analyzeDocuments, buildPrompt, parseJsonText, normalizeResult };
+module.exports = { analyzeDocuments, buildPrompt, parseJsonText, normalizeResult, invokeStructuredAi };

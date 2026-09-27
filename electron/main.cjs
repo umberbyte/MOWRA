@@ -4,6 +4,7 @@ const fs = require('node:fs/promises');
 const { spawn } = require('node:child_process');
 const { sourceAdapters, ALLOWED_EXTENSIONS } = require('./source-adapters.cjs');
 const { analyzeDocuments } = require('./analysis-service.cjs');
+const { generateTestCases } = require('./test-case-service.cjs');
 const { serializeProject, deserializeProject } = require('./project-format.cjs');
 
 const appRoot = path.join(__dirname, '..');
@@ -76,11 +77,14 @@ function createWindow({ smokeTest = false } = {}) {
           filePicker: typeof window.desktopBridge?.selectFiles === 'function',
           referencePicker: typeof window.desktopBridge?.selectReferenceFiles === 'function',
           analyzer: typeof window.desktopBridge?.analyzeFiles === 'function',
+          caseGenerator: typeof window.desktopBridge?.generateTestCases === 'function',
+          caseWorkspace: Boolean(document.querySelector('#caseWorkspace')),
+          caseGenerateButton: Boolean(document.querySelector('#generateCasesBtn')),
           title: document.title,
           providerStatus: document.querySelector('#providerStatus')?.textContent || ''
         }), 400))`);
         console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
-        app.exit(result.bridge && result.filePicker && result.referencePicker && result.analyzer && result.title.startsWith('MOWRA') ? 0 : 1);
+        app.exit(result.bridge && result.filePicker && result.referencePicker && result.analyzer && result.caseGenerator && result.caseWorkspace && result.caseGenerateButton && result.title.startsWith('MOWRA') ? 0 : 1);
       } catch (error) {
         console.error('SMOKE_TEST_FAILED', error);
         app.exit(1);
@@ -129,6 +133,18 @@ ipcMain.handle('project:export-csv', async (_event, payload) => {
   return result.filePath;
 });
 
+ipcMain.handle('project:export-test-cases-csv', async (_event, payload) => {
+  const safeName = String(payload.projectName || 'test-cases').replace(/[\\/:*?"<>|]/g, '-');
+  const result = await dialog.showSaveDialog({
+    title: 'テストケース表をCSVで出力',
+    defaultPath: `${safeName}-test-cases.csv`,
+    filters: [{ name: 'CSV', extensions: ['csv'] }]
+  });
+  if (result.canceled || !result.filePath) return null;
+  await fs.writeFile(result.filePath, payload.csv, 'utf8');
+  return result.filePath;
+});
+
 ipcMain.handle('sources:list', () => Object.values(sourceAdapters).map(({ id, label, available, reason }) => ({ id, label, available, reason })));
 
 async function selectDocumentFiles({ title, filterName }) {
@@ -168,6 +184,11 @@ ipcMain.handle('ai:capabilities', async () => ({
 ipcMain.handle('ai:analyze-files', async (_event, request) => analyzeDocuments(request, {
   userDataPath: app.getPath('userData'),
   schemaPath: path.join(__dirname, 'analysis-schema.json')
+}));
+
+ipcMain.handle('ai:generate-test-cases', async (_event, request) => generateTestCases(request, {
+  userDataPath: app.getPath('userData'),
+  schemaPath: path.join(__dirname, 'test-case-schema.json')
 }));
 
 app.whenReady().then(() => {
