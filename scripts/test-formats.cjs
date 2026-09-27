@@ -9,6 +9,7 @@ const { sourceAdapters } = require('../electron/source-adapters.cjs');
 const { buildPrompt, compactText, CUSTOMER_PROMPT_BUDGET, REFERENCE_PROMPT_BUDGET, MAX_VIEWPOINTS } = require('../electron/analysis-service.cjs');
 const { generateTestCases, buildTestCasePrompt, normalizeTestCaseResult, FAST_BATCH_SIZE } = require('../electron/test-case-service.cjs');
 const { executeAutomation, validateAutomationCase, locatorCode, buildPlaywrightCode } = require('../electron/automation-service.cjs');
+const { windowsCandidates } = require('../electron/cli-resolver.cjs');
 
 function writeMinimalPdf(filePath) {
   const objects = [
@@ -43,6 +44,9 @@ function writeMinimalPptx(filePath) {
 }
 
 async function run() {
+  const cliCandidates = windowsCandidates('codex', { LOCALAPPDATA: 'C:\\Local', APPDATA: 'C:\\Roaming', MOWRA_CODEX_PATH: 'C:\\Tools\\codex.exe' });
+  assert.equal(cliCandidates[0], 'C:\\Tools\\codex.exe');
+  assert.ok(cliCandidates.includes(path.join('C:\\Roaming', 'npm', 'codex.cmd')));
   const sample = {
     projectName: '案件 & <確認>', targetUrl: 'https://example.jp/?a=1&b=2', mode: 'ambiguous', activeStage: 'cases',
     focus: 'general', filter: 'review', aiProvider: 'codex', context: '顧客の説明\n2行目',

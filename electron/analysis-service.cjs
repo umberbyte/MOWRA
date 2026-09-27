@@ -140,7 +140,7 @@ async function analyzeWithCodex(prompt, runtime) {
   const schemaPath = path.join(runtimeDir, 'analysis-schema.json');
   await fs.copyFile(runtime.schemaPath, schemaPath);
   const reasoningArgs = runtime.reasoningEffort ? ['-c', `model_reasoning_effort="${runtime.reasoningEffort}"`] : [];
-  const result = await runProcess('codex', [
+  const result = await runProcess(runtime.codexCommand || 'codex', [
     'exec', ...reasoningArgs, '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only',
     '--output-schema', schemaPath, '--color', 'never', '-'
   ], prompt, { cwd: runtimeDir });
@@ -150,7 +150,7 @@ async function analyzeWithCodex(prompt, runtime) {
 async function analyzeWithClaude(prompt, runtime) {
   const runtimeDir = path.join(runtime.userDataPath, 'analysis-runtime');
   await fs.mkdir(runtimeDir, { recursive: true });
-  const result = await runProcess('claude', [
+  const result = await runProcess(runtime.claudeCommand || 'claude', [
     '-p', '--output-format', 'json', '--permission-mode', 'plan', '--max-turns', '1'
   ], `${prompt}\n\nJSON以外の文章やコードフェンスは出力しないでください。`, { cwd: runtimeDir });
   const wrapper = parseJsonText(result.stdout);

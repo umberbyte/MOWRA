@@ -1,8 +1,8 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
-const { spawn } = require('node:child_process');
 const { sourceAdapters, ALLOWED_EXTENSIONS } = require('./source-adapters.cjs');
+const { resolveCliCommand } = require('./cli-resolver.cjs');
 const { analyzeDocuments } = require('./analysis-service.cjs');
 const { generateTestCases } = require('./test-case-service.cjs');
 const { executeAutomation } = require('./automation-service.cjs');
@@ -176,29 +176,25 @@ ipcMain.handle('automation:select-bruno-collection', async () => {
   return result.canceled ? null : result.filePaths[0];
 });
 
-function commandAvailable(command) {
-  return new Promise((resolve) => {
-    const lookup = spawn(process.platform === 'win32' ? 'where.exe' : 'which', [command], { windowsHide: true, shell: false });
-    lookup.on('error', () => resolve(false));
-    lookup.on('close', (code) => resolve(code === 0));
-  });
-}
-
 ipcMain.handle('ai:capabilities', async () => ({
-  codex: await commandAvailable('codex'),
-  claude: await commandAvailable('claude')
+  codex: Boolean(await resolveCliCommand('codex')),
+  claude: Boolean(await resolveCliCommand('claude'))
 }));
 
 ipcMain.handle('ai:analyze-files', async (_event, request) => analyzeDocuments(request, {
   userDataPath: app.getPath('userData'),
   schemaPath: path.join(__dirname, 'analysis-schema.json'),
-  reasoningEffort: 'low'
+  reasoningEffort: 'low',
+  codexCommand: await resolveCliCommand('codex'),
+  claudeCommand: await resolveCliCommand('claude')
 }));
 
 ipcMain.handle('ai:generate-test-cases', async (_event, request) => generateTestCases(request, {
   userDataPath: app.getPath('userData'),
   schemaPath: path.join(__dirname, 'test-case-schema.json'),
-  reasoningEffort: 'low'
+  reasoningEffort: 'low',
+  codexCommand: await resolveCliCommand('codex'),
+  claudeCommand: await resolveCliCommand('claude')
 }));
 
 ipcMain.handle('automation:execute', async (_event, request) => executeAutomation(request, {
