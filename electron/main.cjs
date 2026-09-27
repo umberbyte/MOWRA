@@ -19,27 +19,26 @@ async function writeTextAtomic(filePath, value) {
   await fs.rename(temporaryPath, filePath);
 }
 
-async function readJson(filePath) {
-  try {
-    return JSON.parse(await fs.readFile(filePath, 'utf8'));
-  } catch (error) {
-    if (error.code === 'ENOENT') return null;
-    throw error;
-  }
-}
-
 async function readProject(filePath) {
   const raw = await fs.readFile(filePath, 'utf8');
   return path.extname(filePath).toLowerCase() === '.testprj' ? deserializeProject(raw) : JSON.parse(raw);
 }
 
 async function loadAutoSave() {
-  try {
-    return await readProject(autoSavePath());
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-    return readJson(path.join(app.getPath('userData'), 'current-project.json'));
+  const candidates = [
+    autoSavePath(),
+    path.join(app.getPath('userData'), 'current-project.json'),
+    path.join(app.getPath('appData'), 'scopecraft-desktop', 'current-project.testprj'),
+    path.join(app.getPath('appData'), 'scopecraft-desktop', 'current-project.json')
+  ];
+  for (const candidate of candidates) {
+    try {
+      return await readProject(candidate);
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
   }
+  return null;
 }
 
 async function saveProjectFile(filePath, project) {
@@ -54,7 +53,7 @@ function createWindow({ smokeTest = false } = {}) {
     minHeight: 680,
     backgroundColor: '#f4f6f2',
     show: false,
-    title: 'ScopeCraft — テスト観点設計',
+    title: 'MOWRA — テスト観点設計',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -80,7 +79,7 @@ function createWindow({ smokeTest = false } = {}) {
           providerStatus: document.querySelector('#providerStatus')?.textContent || ''
         }), 400))`);
         console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
-        app.exit(result.bridge && result.filePicker && result.referencePicker && result.analyzer ? 0 : 1);
+        app.exit(result.bridge && result.filePicker && result.referencePicker && result.analyzer && result.title.startsWith('MOWRA') ? 0 : 1);
       } catch (error) {
         console.error('SMOKE_TEST_FAILED', error);
         app.exit(1);
@@ -94,11 +93,11 @@ ipcMain.handle('project:save-autosave', (_event, project) => saveProjectFile(aut
 
 ipcMain.handle('project:open', async () => {
   const result = await dialog.showOpenDialog({
-    title: 'ScopeCraft案件を開く',
+    title: 'MOWRA案件を開く',
     properties: ['openFile'],
     filters: [
-      { name: 'ScopeCraft案件', extensions: ['testprj'] },
-      { name: '旧ScopeCraft案件', extensions: ['scopecraft', 'json'] }
+      { name: 'MOWRA案件', extensions: ['testprj'] },
+      { name: '旧形式の案件', extensions: ['scopecraft', 'json'] }
     ]
   });
   if (result.canceled || !result.filePaths[0]) return null;
@@ -108,9 +107,9 @@ ipcMain.handle('project:open', async () => {
 ipcMain.handle('project:save-as', async (_event, project) => {
   const safeName = String(project.projectName || 'test-project').replace(/[\\/:*?"<>|]/g, '-');
   const result = await dialog.showSaveDialog({
-    title: 'ScopeCraft案件を保存',
+    title: 'MOWRA案件を保存',
     defaultPath: `${safeName}.testprj`,
-    filters: [{ name: 'ScopeCraft案件（XML）', extensions: ['testprj'] }]
+    filters: [{ name: 'MOWRA案件（XML）', extensions: ['testprj'] }]
   });
   if (result.canceled || !result.filePath) return null;
   await saveProjectFile(result.filePath, project);
@@ -171,7 +170,7 @@ ipcMain.handle('ai:analyze-files', async (_event, request) => analyzeDocuments(r
 }));
 
 app.whenReady().then(() => {
-  app.setAppUserModelId('jp.scopecraft.desktop');
+  app.setAppUserModelId('jp.mowra.desktop');
   const smokeTest = process.argv.includes('--smoke-test');
   createWindow({ smokeTest });
   app.on('activate', () => {

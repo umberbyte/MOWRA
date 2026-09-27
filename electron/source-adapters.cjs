@@ -42,7 +42,7 @@ function truncateExtractedText(content, fileName) {
   const normalized = String(content || '').replaceAll('\u0000', '').trim();
   if (!normalized) throw new Error(`${fileName} から分析可能な文字を抽出できませんでした`);
   if (normalized.length <= MAX_EXTRACTED_CHARACTERS) return normalized;
-  return `${normalized.slice(0, MAX_EXTRACTED_CHARACTERS)}\n\n[ScopeCraft: 抽出結果が長いため、ここで省略しました]`;
+  return `${normalized.slice(0, MAX_EXTRACTED_CHARACTERS)}\n\n[MOWRA: 抽出結果が長いため、ここで省略しました]`;
 }
 
 function htmlToText(html) {

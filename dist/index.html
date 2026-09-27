@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="仕様が曖昧なWeb案件でも、根拠と合意状態を残しながらテスト観点を設計するワークスペース。">
-  <title>ScopeCraft — テスト観点設計</title>
+  <title>MOWRA — テスト観点設計</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23172622'/%3E%3Cpath d='M18 18h28v7H25v8h17v7H25v6h21v7H18z' fill='%23d7ff62'/%3E%3C/svg%3E">
   <style>
     :root{--ink:#172622;--muted:#60706b;--paper:#f4f6f2;--panel:#fff;--line:#dce2dc;--acid:#d7ff62;--acid-strong:#b7e72e;--teal:#0d776e;--blue:#dbeafa;--amber:#fff0bd;--red:#ffe3dc;--shadow:0 14px 40px rgba(23,38,34,.08);font-family:"Yu Gothic UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;color:var(--ink);background:var(--paper)}
@@ -29,7 +29,7 @@
 <body>
   <div class="app">
     <aside>
-      <div class="brand"><div class="brand-mark">S</div><div class="brand-text">ScopeCraft<small>AI TEST DESIGN</small></div></div>
+      <div class="brand"><div class="brand-mark">M</div><div class="brand-text">MOWRA<small>AI TEST DESIGN</small></div></div>
       <nav aria-label="MVPの工程">
         <div class="nav-item active"><span class="nav-num">1</span><span class="nav-label">テスト観点の設計</span><span class="nav-tag">進行中</span></div>
         <div class="nav-item"><span class="nav-num">2</span><span class="nav-label">テストケースの設計</span></div>
@@ -80,7 +80,7 @@
   </dialog>
   <div id="toast" class="toast" role="status"></div>
   <script>
-    const STORAGE='scopecraft-phase1-v1';
+    const STORAGE='mowra-phase1-v1',LEGACY_STORAGE='scopecraft-phase1-v1';
     const seeds={
       inquiry:[
         ['問い合わせフォーム','必須情報を入力して送信できる','利用者が入力を完了し、受付結果を確認できること。','高','顧客説明','review','受付完了は画面表示だけでよいですか。受付記録や自動返信も確認対象にしますか。'],
@@ -113,7 +113,7 @@
     let state={mode:'ambiguous',sources:['現行画面','顧客説明','UX指針','WCAG 2.2'],filter:'all',items:[],inputFiles:[],referenceFiles:[],aiProvider:'codex'};
     let aiCapabilities={codex:false,claude:false};
     const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-    async function load(){if(window.desktopBridge?.isElectron)return await window.desktopBridge.loadAutoSave();try{return JSON.parse(localStorage.getItem(STORAGE))}catch{return null}}
+    async function load(){if(window.desktopBridge?.isElectron)return await window.desktopBridge.loadAutoSave();try{return JSON.parse(localStorage.getItem(STORAGE)||localStorage.getItem(LEGACY_STORAGE))}catch{return null}}
     function persist(){state.projectName=$('#projectName').value;state.targetUrl=$('#targetUrl').value;state.context=$('#context').value;state.focus=$('#focus').value;state.aiProvider=$('#aiProvider').value;if(window.desktopBridge?.isElectron)window.desktopBridge.saveAutoSave(state).catch(()=>toast('自動保存に失敗しました'));else localStorage.setItem(STORAGE,JSON.stringify(state));$('#crumbName').textContent=state.projectName||'名称未設定'}
     function restore(){state.sources=state.sources||[];state.inputFiles=state.inputFiles||[];state.referenceFiles=state.referenceFiles||[];if(state.projectName)$('#projectName').value=state.projectName;if(state.targetUrl)$('#targetUrl').value=state.targetUrl;if(state.context)$('#context').value=state.context;if(state.focus)$('#focus').value=state.focus;if(state.aiProvider)$('#aiProvider').value=state.aiProvider;$$('.mode').forEach(x=>x.classList.toggle('active',x.dataset.mode===state.mode));$$('.source-chip').forEach(x=>x.classList.toggle('on',state.sources.includes(x.dataset.source)));$$('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===state.filter));renderFiles();updateProviderStatus();persist();render()}
     function fileRows(files,attribute,emptyText){return files.length?files.map(file=>`<div class="file-item"><span class="file-name" title="${esc(file.name)}">${esc(file.name)}</span><span class="file-size">${Math.max(1,Math.round(file.size/1024))} KB</span><button class="file-remove" ${attribute}="${esc(file.id)}" aria-label="${esc(file.name)}を除外">×</button></div>`).join(''):`<div class="empty-files">${emptyText}</div>`}

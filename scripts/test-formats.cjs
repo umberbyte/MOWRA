@@ -14,7 +14,7 @@ function writeMinimalPdf(filePath) {
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
     '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-    '<< /Length 57 >>\nstream\nBT /F1 12 Tf 72 720 Td (ScopeCraft PDF Requirement) Tj ET\nendstream'
+    '<< /Length 52 >>\nstream\nBT /F1 12 Tf 72 720 Td (MOWRA PDF Requirement) Tj ET\nendstream'
   ];
   let pdf = '%PDF-1.4\n';
   const offsets = [0];
@@ -35,7 +35,7 @@ function writeMinimalPptx(filePath) {
     '_rels/.rels': '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>',
     'ppt/presentation.xml': '<?xml version="1.0" encoding="UTF-8"?><p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst></p:presentation>',
     'ppt/_rels/presentation.xml.rels': '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/></Relationships>',
-    'ppt/slides/slide1.xml': '<?xml version="1.0" encoding="UTF-8"?><p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id="2" name="Title"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="ja-JP"/><a:t>ScopeCraft PPTX Requirement</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>'
+    'ppt/slides/slide1.xml': '<?xml version="1.0" encoding="UTF-8"?><p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id="2" name="Title"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="ja-JP"/><a:t>MOWRA PPTX Requirement</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>'
   };
   fs.writeFileSync(filePath, Buffer.from(zipSync(Object.fromEntries(Object.entries(xml).map(([name, value]) => [name, strToU8(value)])))));
 }
@@ -64,7 +64,7 @@ async function run() {
   assert.match(prompt, /標準観点集等の自社ドキュメント/);
   assert.match(prompt, /当該案件の仕様や合意事項とはみなさない/);
 
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'scopecraft-formats-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mowra-formats-'));
   try {
     fs.writeFileSync(path.join(directory, 'sample.html'), '<h1>Visible heading</h1><script>SECRET_SCRIPT</script><p>Visible body</p>');
     fs.writeFileSync(path.join(directory, 'sample.csv'), 'feature,expected\nsearch,results');
@@ -84,8 +84,8 @@ async function run() {
     assert.match(byExtension['.csv'], /search,results/);
     assert.match(byExtension['.xlsx'], /シート: Requirements[\s\S]*login,dashboard/);
     assert.match(byExtension['.xls'], /シート: Requirements[\s\S]*login,dashboard/);
-    assert.match(byExtension['.pdf'], /ScopeCraft PDF Requirement/);
-    assert.match(byExtension['.pptx'], /ScopeCraft PPTX Requirement/);
+    assert.match(byExtension['.pdf'], /MOWRA PDF Requirement/);
+    assert.match(byExtension['.pptx'], /MOWRA PPTX Requirement/);
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }

@@ -1,5 +1,5 @@
 {
-  "name": "scopecraft-desktop",
+  "name": "mowra-desktop",
   "version": "0.1.0",
   "private": true,
   "description": "AI-assisted test viewpoint design desktop application",
@@ -8,7 +8,7 @@
     "start": "electron .",
     "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/source-adapters.cjs && node --check electron/project-format.cjs && node --check electron/analysis-service.cjs && node scripts/check-renderer.cjs",
     "test:formats": "node scripts/test-formats.cjs",
-    "package:win": "electron-packager . ScopeCraft --platform=win32 --arch=x64 --out=../../outputs --overwrite --ignore=\"^/(?:work|[.]git|[.]openai|scripts)$\""
+    "package:win": "electron-packager . MOWRA --platform=win32 --arch=x64 --out=../../outputs --overwrite --ignore=\"^/(?:work|[.]git|[.]openai|scripts)$\""
   },
   "devDependencies": {
     "@electron/packager": "^19.0.1",
