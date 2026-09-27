@@ -24,6 +24,7 @@ function buildTestCasePrompt({ viewpoints, project }) {
 - 操作手順と、各手順の観察可能な期待結果を対で記述する。
 - 必要に応じて同値分割、境界値分析、状態遷移、デシジョンテーブル、エラー推測を使う。
 - 正常系だけでなく、観点に適する異常系・境界値も生成する。
+- 各観点につき重要なケースを1〜3件に絞る。
 - 資料にない具体値、アカウント、環境は断定せず、プレースホルダーまたは事前条件として明示する。
 - 合意済み観点から直接導けない仮定が含まれるケースはstateをreviewにする。
 - 期待結果に「正しく表示される」などの曖昧な表現を使わず、判定できる状態を書く。
@@ -68,14 +69,28 @@ function normalizeTestCaseResult(result, viewpoints) {
   };
 }
 
-async function generateTestCases(request, runtime) {
+async function generateTestCases(request, runtime, invokeAi = invokeStructuredAi) {
   if (!request.confirmedExternalTransmission) throw new Error('AIサービスへの観点送信確認が必要です');
   if (!['codex', 'claude'].includes(request.provider)) throw new Error('未対応のAIプロバイダーです');
   const viewpoints = Array.isArray(request.viewpoints) ? request.viewpoints.filter((item) => item?.state === 'agreed') : [];
   if (!viewpoints.length) throw new Error('合意済みのテスト観点がありません');
-  const prompt = buildTestCasePrompt({ viewpoints, project: request.project || {} });
-  const result = await invokeStructuredAi(request.provider, prompt, runtime);
-  return normalizeTestCaseResult(result, viewpoints);
+  const batchSize = 4;
+  const generated = [];
+  const summaries = [];
+  for (let offset = 0; offset < viewpoints.length; offset += batchSize) {
+    const batch = viewpoints.slice(offset, offset + batchSize);
+    const prompt = buildTestCasePrompt({ viewpoints: batch, project: request.project || {} });
+    try {
+      const result = await invokeAi(request.provider, prompt, runtime, batch);
+      const normalized = normalizeTestCaseResult(result, batch);
+      generated.push(...normalized.testCases);
+      if (normalized.summary) summaries.push(normalized.summary);
+    } catch (error) {
+      const range = `${offset + 1}〜${offset + batch.length}件目`;
+      throw new Error(`観点${range}のケース生成に失敗しました: ${error.message}`);
+    }
+  }
+  return { summary: summaries.join('\n'), testCases: generated.slice(0, 60) };
 }
 
 module.exports = { generateTestCases, buildTestCasePrompt, normalizeTestCaseResult };

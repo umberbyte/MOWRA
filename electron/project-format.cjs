@@ -85,7 +85,10 @@ function serializeProject(project = {}) {
         summary: text(project.analysisSummary),
         questions: { question: (project.analysisQuestions || []).map((question) => ({ '#text': text(question) })) }
       },
-      testCaseAnalysis: { summary: text(project.testCaseSummary) }
+      testCaseAnalysis: {
+        summary: text(project.testCaseSummary),
+        status: text(project.caseGenerationStatus)
+      }
     }
   };
   const builder = new XMLBuilder({ ignoreAttributes: false, format: true, suppressEmptyNode: false });
@@ -144,7 +147,8 @@ function deserializeProject(xml) {
     })),
     analysisSummary: nodeText(root.analysis?.summary),
     analysisQuestions: (root.analysis?.questions?.question || []).map(nodeText),
-    testCaseSummary: nodeText(root.testCaseAnalysis?.summary)
+    testCaseSummary: nodeText(root.testCaseAnalysis?.summary),
+    caseGenerationStatus: nodeText(root.testCaseAnalysis?.status)
   };
 }
 

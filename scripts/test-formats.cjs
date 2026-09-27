@@ -7,7 +7,7 @@ const { zipSync, strToU8 } = require('fflate');
 const { serializeProject, deserializeProject } = require('../electron/project-format.cjs');
 const { sourceAdapters } = require('../electron/source-adapters.cjs');
 const { buildPrompt } = require('../electron/analysis-service.cjs');
-const { buildTestCasePrompt, normalizeTestCaseResult } = require('../electron/test-case-service.cjs');
+const { generateTestCases, buildTestCasePrompt, normalizeTestCaseResult } = require('../electron/test-case-service.cjs');
 
 function writeMinimalPdf(filePath) {
   const objects = [
@@ -50,7 +50,7 @@ async function run() {
     referenceFiles: [{ id: 'r1', name: '社内観点集.pdf', path: 'C:\\標準\\社内観点集.pdf', extension: '.pdf', size: 456, sourceType: 'local-file' }],
     items: [{ id: 'VP-001', target: '画面', title: '操作 & 応答', description: '期待どおり', basis: 'UX指針', priority: '高', state: 'review', question: '確認？' }],
     testCases: [{ id: 'TC-001', viewpointId: 'VP-001', title: '正常に操作できる', type: '正常系', priority: '高', state: 'draft', preconditions: 'ログイン済み', testData: '有効な値', steps: [{ action: 'ボタンを押す', expected: '完了が表示される' }] }],
-    analysisSummary: '要約', analysisQuestions: ['質問1', '質問2'], testCaseSummary: 'ケース要約'
+    analysisSummary: '要約', analysisQuestions: ['質問1', '質問2'], testCaseSummary: 'ケース要約', caseGenerationStatus: '生成完了'
   };
   const xml = serializeProject(sample);
   assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
@@ -77,6 +77,15 @@ async function run() {
     summary: '設計完了',
     testCases: [{ viewpointId: 'VP-001', title: '有効な値で完了できる', type: '正常系', priority: '高', preconditions: 'ログイン済み', testData: '有効な値', state: 'draft', steps: [{ action: '値を入力する', expected: '値が入力欄に表示される' }] }]
   });
+  const manyViewpoints = Array.from({ length: 20 }, (_, index) => ({ ...agreedViewpoint, id: `VP-${String(index + 1).padStart(3, '0')}` }));
+  let batchCalls = 0;
+  const batched = await generateTestCases({ provider: 'codex', confirmedExternalTransmission: true, viewpoints: manyViewpoints, project: sample }, {}, async (_provider, _prompt, _runtime, batch) => {
+    batchCalls++;
+    assert.ok(batch.length <= 4);
+    return { summary: `batch ${batchCalls}`, testCases: batch.map((viewpoint) => ({ viewpointId: viewpoint.id, title: `${viewpoint.id}のケース`, type: '正常系', priority: '高', preconditions: '前提', testData: 'データ', state: 'draft', steps: [{ action: '操作', expected: '結果' }] })) };
+  });
+  assert.equal(batchCalls, 5);
+  assert.equal(batched.testCases.length, 20);
 
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mowra-formats-'));
   try {
