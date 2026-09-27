@@ -6,7 +6,7 @@ const XLSX = require('xlsx');
 const { zipSync, strToU8 } = require('fflate');
 const { serializeProject, deserializeProject } = require('../electron/project-format.cjs');
 const { sourceAdapters } = require('../electron/source-adapters.cjs');
-const { buildPrompt } = require('../electron/analysis-service.cjs');
+const { buildPrompt, compactText, CUSTOMER_PROMPT_BUDGET, REFERENCE_PROMPT_BUDGET, MAX_VIEWPOINTS } = require('../electron/analysis-service.cjs');
 const { generateTestCases, buildTestCasePrompt, normalizeTestCaseResult, FAST_BATCH_SIZE } = require('../electron/test-case-service.cjs');
 
 function writeMinimalPdf(filePath) {
@@ -46,11 +46,11 @@ async function run() {
     projectName: '案件 & <確認>', targetUrl: 'https://example.jp/?a=1&b=2', mode: 'ambiguous', activeStage: 'cases',
     focus: 'general', filter: 'review', aiProvider: 'codex', context: '顧客の説明\n2行目',
     sources: ['現行画面', 'UX指針'],
-    inputFiles: [{ id: 'f1', name: '仕様.xlsx', path: 'C:\\案件\\仕様.xlsx', extension: '.xlsx', size: 123, sourceType: 'local-file' }],
-    referenceFiles: [{ id: 'r1', name: '社内観点集.pdf', path: 'C:\\標準\\社内観点集.pdf', extension: '.pdf', size: 456, sourceType: 'local-file' }],
+    inputFiles: [{ id: 'f1', name: '仕様.xlsx', path: 'C:\\案件\\仕様.xlsx', extension: '.xlsx', size: 123, modifiedAt: 1000, sourceType: 'local-file' }],
+    referenceFiles: [{ id: 'r1', name: '社内観点集.pdf', path: 'C:\\標準\\社内観点集.pdf', extension: '.pdf', size: 456, modifiedAt: 2000, sourceType: 'local-file' }],
     items: [{ id: 'VP-001', target: '画面', title: '操作 & 応答', description: '期待どおり', basis: 'UX指針', priority: '高', state: 'review', question: '確認？' }],
     testCases: [{ id: 'TC-001', viewpointId: 'VP-001', title: '正常に操作できる', type: '正常系', priority: '高', state: 'draft', preconditions: 'ログイン済み', testData: '有効な値', steps: [{ action: 'ボタンを押す', expected: '完了が表示される' }] }],
-    analysisSummary: '要約', analysisQuestions: ['質問1', '質問2'], testCaseSummary: 'ケース要約', caseGenerationStatus: '生成完了'
+    analysisSummary: '要約', analysisStatus: '分析完了', analysisInputSignature: 'signature-1', analysisQuestions: ['質問1', '質問2'], testCaseSummary: 'ケース要約', caseGenerationStatus: '生成完了'
   };
   const xml = serializeProject(sample);
   assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
@@ -65,6 +65,17 @@ async function run() {
   assert.match(prompt, /<company-reference[^>]+社内観点集\.pdf[^>]*>[\s\S]*再利用する観点/);
   assert.match(prompt, /標準観点集等の自社ドキュメント/);
   assert.match(prompt, /当該案件の仕様や合意事項とはみなさない/);
+  assert.ok(compactText('a'.repeat(10_000), 1_000).length <= 1_000);
+  assert.ok(compactText('a'.repeat(10_000), 1_000).length > 900);
+  const largePrompt = buildPrompt({
+    customerDocuments: [{ name: 'large.txt', content: '顧客要件\n'.repeat(100_000) }],
+    referenceDocuments: [{ name: 'reference.txt', content: '標準観点\n'.repeat(100_000) }],
+    existingViewpoints: [{ target: 'ログイン', title: 'ログインできる' }],
+    project: sample
+  });
+  assert.ok(largePrompt.length < CUSTOMER_PROMPT_BUDGET + REFERENCE_PROMPT_BUDGET + 10_000);
+  assert.match(largePrompt, /ログインできる/);
+  assert.equal(MAX_VIEWPOINTS, 12);
   const agreedViewpoint = { ...sample.items[0], state: 'agreed' };
   const casePrompt = buildTestCasePrompt({ viewpoints: [agreedViewpoint], project: sample });
   assert.match(casePrompt, /合意済み観点/);

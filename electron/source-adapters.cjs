@@ -32,6 +32,7 @@ async function describeLocalFiles(filePaths) {
       path: absolutePath,
       extension,
       size: stat.size,
+      modifiedAt: Math.trunc(stat.mtimeMs),
       sourceType: 'local-file'
     });
   }

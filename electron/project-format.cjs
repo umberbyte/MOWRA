@@ -35,6 +35,7 @@ function serializeProject(project = {}) {
           '@_id': text(file.id),
           '@_extension': text(file.extension),
           '@_size': Number(file.size) || 0,
+          '@_modifiedAt': Number(file.modifiedAt) || 0,
           '@_sourceType': text(file.sourceType || 'local-file'),
           name: text(file.name),
           path: text(file.path)
@@ -45,6 +46,7 @@ function serializeProject(project = {}) {
           '@_id': text(file.id),
           '@_extension': text(file.extension),
           '@_size': Number(file.size) || 0,
+          '@_modifiedAt': Number(file.modifiedAt) || 0,
           '@_sourceType': text(file.sourceType || 'local-file'),
           name: text(file.name),
           path: text(file.path)
@@ -83,6 +85,8 @@ function serializeProject(project = {}) {
       },
       analysis: {
         summary: text(project.analysisSummary),
+        status: text(project.analysisStatus),
+        inputSignature: text(project.analysisInputSignature),
         questions: { question: (project.analysisQuestions || []).map((question) => ({ '#text': text(question) })) }
       },
       testCaseAnalysis: {
@@ -124,11 +128,13 @@ function deserializeProject(xml) {
     inputFiles: (root.inputFiles?.file || []).map((file) => ({
       id: text(file['@_id']), name: nodeText(file.name), path: nodeText(file.path),
       extension: text(file['@_extension']), size: Number(file['@_size']) || 0,
+      modifiedAt: Number(file['@_modifiedAt']) || 0,
       sourceType: text(file['@_sourceType']) || 'local-file'
     })),
     referenceFiles: (root.referenceFiles?.file || []).map((file) => ({
       id: text(file['@_id']), name: nodeText(file.name), path: nodeText(file.path),
       extension: text(file['@_extension']), size: Number(file['@_size']) || 0,
+      modifiedAt: Number(file['@_modifiedAt']) || 0,
       sourceType: text(file['@_sourceType']) || 'local-file'
     })),
     items: (root.viewpoints?.viewpoint || []).map((item) => ({
@@ -146,6 +152,8 @@ function deserializeProject(xml) {
       }))
     })),
     analysisSummary: nodeText(root.analysis?.summary),
+    analysisStatus: nodeText(root.analysis?.status),
+    analysisInputSignature: nodeText(root.analysis?.inputSignature),
     analysisQuestions: (root.analysis?.questions?.question || []).map(nodeText),
     testCaseSummary: nodeText(root.testCaseAnalysis?.summary),
     caseGenerationStatus: nodeText(root.testCaseAnalysis?.status)

@@ -4,28 +4,29 @@
   "additionalProperties": false,
   "required": ["summary", "viewpoints", "questions"],
   "properties": {
-    "summary": { "type": "string" },
+    "summary": { "type": "string", "maxLength": 500 },
     "viewpoints": {
       "type": "array",
-      "maxItems": 30,
+      "maxItems": 12,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["target", "title", "description", "priority", "basis", "state", "question"],
         "properties": {
-          "target": { "type": "string" },
-          "title": { "type": "string" },
-          "description": { "type": "string" },
+          "target": { "type": "string", "maxLength": 200 },
+          "title": { "type": "string", "maxLength": 300 },
+          "description": { "type": "string", "maxLength": 1500 },
           "priority": { "type": "string", "enum": ["高", "中", "低"] },
-          "basis": { "type": "string" },
+          "basis": { "type": "string", "maxLength": 500 },
           "state": { "type": "string", "enum": ["draft", "review"] },
-          "question": { "type": "string" }
+          "question": { "type": "string", "maxLength": 500 }
         }
       }
     },
     "questions": {
       "type": "array",
-      "items": { "type": "string" }
+      "maxItems": 8,
+      "items": { "type": "string", "maxLength": 500 }
     }
   }
 }
