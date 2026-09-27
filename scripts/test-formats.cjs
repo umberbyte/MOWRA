@@ -101,8 +101,12 @@ async function run() {
     preconditions: '画面表示済み', testData: 'なし', state: 'draft',
     steps: [{ actionTarget: 'ボタン', actionLocator: 'button', operation: 'click', actionValue: '', action: '押す', expectedTarget: 'メッセージ', expectedLocator: 'text=完了', assertion: 'visible', expectedValue: '', expected: '完了する' }]
   }] }, [agreedViewpoint]);
-  assert.equal(ambiguousLocator.testCases[0].state, 'review');
-  assert.match(ambiguousLocator.testCases[0].steps[0].actionLocator, /^要確認:/);
+  assert.equal(ambiguousLocator.testCases[0].state, 'draft');
+  assert.match(ambiguousLocator.testCases[0].steps[0].actionLocator, /^getByRole\('button'/);
+  assert.match(ambiguousLocator.testCases[0].steps[0].expectedLocator, /^getByRole\('button'/);
+  const inferredStep = ambiguousLocator.testCases[0].steps[0];
+  const inferredFields = [inferredStep.actionTarget, inferredStep.actionLocator, inferredStep.operation, inferredStep.action, inferredStep.expectedTarget, inferredStep.expectedLocator, inferredStep.assertion, inferredStep.expected];
+  assert.ok(inferredFields.filter((value) => value && value !== 'none' && !/^要確認/.test(value)).length / inferredFields.length >= 0.9);
   const manyViewpoints = Array.from({ length: 20 }, (_, index) => ({ ...agreedViewpoint, id: `VP-${String(index + 1).padStart(3, '0')}` }));
   let batchCalls = 0;
   const batched = await generateTestCases({ provider: 'codex', confirmedExternalTransmission: true, viewpoints: manyViewpoints, project: sample }, {}, async (_provider, _prompt, _runtime, batch) => {
