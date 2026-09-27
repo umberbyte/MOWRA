@@ -49,7 +49,7 @@ async function run() {
     inputFiles: [{ id: 'f1', name: '仕様.xlsx', path: 'C:\\案件\\仕様.xlsx', extension: '.xlsx', size: 123, modifiedAt: 1000, sourceType: 'local-file' }],
     referenceFiles: [{ id: 'r1', name: '社内観点集.pdf', path: 'C:\\標準\\社内観点集.pdf', extension: '.pdf', size: 456, modifiedAt: 2000, sourceType: 'local-file' }],
     items: [{ id: 'VP-001', target: '画面', title: '操作 & 応答', description: '期待どおり', basis: 'UX指針', priority: '高', state: 'review', question: '確認？' }],
-    testCases: [{ id: 'TC-001', viewpointId: 'VP-001', title: '正常に操作できる', type: '正常系', priority: '高', state: 'draft', preconditions: 'ログイン済み', testData: '有効な値', steps: [{ action: 'ボタンを押す', expected: '完了が表示される' }] }],
+    testCases: [{ id: 'TC-001', viewpointId: 'VP-001', title: '正常に操作できる', type: '正常系', priority: '高', state: 'draft', preconditions: 'ログイン済み', testData: '有効な値', steps: [{ actionTarget: '送信ボタン', actionLocator: "getByRole('button', { name: '送信', exact: true })", action: 'ボタンを押す', expectedTarget: '完了メッセージ', expectedLocator: "getByRole('status', { name: '送信完了', exact: true })", expected: '完了が表示される' }] }],
     analysisSummary: '要約', analysisStatus: '分析完了', analysisInputSignature: 'signature-1', analysisQuestions: ['質問1', '質問2'], testCaseSummary: 'ケース要約', caseGenerationStatus: '生成完了'
   };
   const xml = serializeProject(sample);
@@ -80,20 +80,29 @@ async function run() {
   const casePrompt = buildTestCasePrompt({ viewpoints: [agreedViewpoint], project: sample });
   assert.match(casePrompt, /合意済み観点/);
   assert.match(casePrompt, /\["VP-001","画面","操作 & 応答"/);
+  assert.match(casePrompt, /getByRole/);
+  assert.match(casePrompt, /DOM上で1件/);
   assert.deepEqual(normalizeTestCaseResult({ summary: '設計完了', testCases: [{
     viewpointId: 'VP-001', title: '有効な値で完了できる', type: '正常系', priority: '高',
     preconditions: 'ログイン済み', testData: '有効な値', state: 'draft',
-    steps: [{ action: '値を入力する', expected: '値が入力欄に表示される' }]
+    steps: [{ actionTarget: '氏名入力欄', actionLocator: "getByLabel('氏名', { exact: true })", action: '値を入力する', expectedTarget: '氏名入力欄', expectedLocator: "getByLabel('氏名', { exact: true })", expected: '値が入力欄に表示される' }]
   }] }, [agreedViewpoint]), {
     summary: '設計完了',
-    testCases: [{ viewpointId: 'VP-001', title: '有効な値で完了できる', type: '正常系', priority: '高', preconditions: 'ログイン済み', testData: '有効な値', state: 'draft', steps: [{ action: '値を入力する', expected: '値が入力欄に表示される' }] }]
+    testCases: [{ viewpointId: 'VP-001', title: '有効な値で完了できる', type: '正常系', priority: '高', preconditions: 'ログイン済み', testData: '有効な値', state: 'draft', steps: [{ actionTarget: '氏名入力欄', actionLocator: "getByLabel('氏名', { exact: true })", action: '値を入力する', expectedTarget: '氏名入力欄', expectedLocator: "getByLabel('氏名', { exact: true })", expected: '値が入力欄に表示される' }] }]
   });
+  const ambiguousLocator = normalizeTestCaseResult({ summary: '', testCases: [{
+    viewpointId: 'VP-001', title: '曖昧な対象を確認する', type: '探索的', priority: '中',
+    preconditions: '画面表示済み', testData: 'なし', state: 'draft',
+    steps: [{ actionTarget: 'ボタン', actionLocator: 'button', action: '押す', expectedTarget: 'メッセージ', expectedLocator: 'text=完了', expected: '完了する' }]
+  }] }, [agreedViewpoint]);
+  assert.equal(ambiguousLocator.testCases[0].state, 'review');
+  assert.match(ambiguousLocator.testCases[0].steps[0].actionLocator, /^要確認:/);
   const manyViewpoints = Array.from({ length: 20 }, (_, index) => ({ ...agreedViewpoint, id: `VP-${String(index + 1).padStart(3, '0')}` }));
   let batchCalls = 0;
   const batched = await generateTestCases({ provider: 'codex', confirmedExternalTransmission: true, viewpoints: manyViewpoints, project: sample }, {}, async (_provider, _prompt, _runtime, batch) => {
     batchCalls++;
     assert.ok(batch.length <= FAST_BATCH_SIZE);
-    return { summary: `batch ${batchCalls}`, testCases: batch.map((viewpoint) => ({ viewpointId: viewpoint.id, title: `${viewpoint.id}のケース`, type: '正常系', priority: '高', preconditions: '前提', testData: 'データ', state: 'draft', steps: [{ action: '操作', expected: '結果' }] })) };
+    return { summary: `batch ${batchCalls}`, testCases: batch.map((viewpoint) => ({ viewpointId: viewpoint.id, title: `${viewpoint.id}のケース`, type: '正常系', priority: '高', preconditions: '前提', testData: 'データ', state: 'draft', steps: [{ actionTarget: '対象', actionLocator: "getByTestId('target')", action: '操作', expectedTarget: '結果', expectedLocator: "getByTestId('result')", expected: '結果' }] })) };
   });
   assert.equal(batchCalls, 2);
   assert.equal(batched.testCases.length, 20);

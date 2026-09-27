@@ -77,7 +77,11 @@ function serializeProject(project = {}) {
           steps: {
             step: (testCase.steps || []).map((step, index) => ({
               '@_number': index + 1,
+              actionTarget: text(step.actionTarget),
+              actionLocator: text(step.actionLocator),
               action: text(step.action),
+              expectedTarget: text(step.expectedTarget),
+              expectedLocator: text(step.expectedLocator),
               expected: text(step.expected)
             }))
           }
@@ -148,7 +152,9 @@ function deserializeProject(xml) {
       priority: nodeText(testCase.priority), state: nodeText(testCase.state),
       preconditions: nodeText(testCase.preconditions), testData: nodeText(testCase.testData),
       steps: (testCase.steps?.step || []).map((step) => ({
-        action: nodeText(step.action), expected: nodeText(step.expected)
+        actionTarget: nodeText(step.actionTarget), actionLocator: nodeText(step.actionLocator),
+        action: nodeText(step.action), expectedTarget: nodeText(step.expectedTarget),
+        expectedLocator: nodeText(step.expectedLocator), expected: nodeText(step.expected)
       }))
     })),
     analysisSummary: nodeText(root.analysis?.summary),

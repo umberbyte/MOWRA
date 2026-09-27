@@ -21,6 +21,10 @@ ${JSON.stringify(compactViewpoints)}
 - 各viewpointIdにつき、最も重要で代表的なケースを必ず1件だけ生成する。
 - 元のviewpointIdと優先度を維持する。
 - 手順は判定に必要な最短の2〜5段階にし、各操作に観察可能な期待結果を書く。
+- 各手順の操作対象と確認対象をDOM上で1件に特定できるPlaywrightロケーター候補にする。
+- ロケーターは getByRole(..., { name: ..., exact: true })、getByLabel(..., { exact: true })、getByTestId(...)、一意なidの順で優先する。button、.btn、部分一致テキストだけの曖昧な指定は禁止する。
+- actionTarget/actionLocatorは操作する部品、expectedTarget/expectedLocatorは期待結果を観察する部品またはテキストを示す。
+- 資料から一意な候補を作れない場合、ロケーターを「要確認: 対象を一意にする情報」の形式にし、ケースのstateをreviewにする。後続のPlaywright実行で候補の一致件数が1件であることを検証する。
 - 観点に最適な同値分割、境界値、状態遷移、エラー推測のいずれかを選びtypeへ反映する。
 - 資料にない値は断定せず、プレースホルダーか事前条件にする。仮定を含む場合はstateをreviewにする。
 - summaryは生成内容を示す1文だけにする。`;
@@ -44,6 +48,24 @@ function normalizeTestCaseResult(result, viewpoints) {
     if (seen.has(viewpointId)) return null;
     seen.add(viewpointId);
     if (!Array.isArray(item.steps) || item.steps.length === 0) throw new Error(`テストケース${caseIndex + 1}の手順がありません`);
+    let locatorNeedsReview = false;
+    const normalizeLocator = (value, label) => {
+      const locator = requiredText(value, label, 500);
+      const confirmedCandidate = /^getByTestId\(/.test(locator)
+        || (/^getBy(?:Role|Label)\(/.test(locator) && /exact\s*:\s*true/.test(locator))
+        || /^locator\(\s*['"]#[A-Za-z][\w:.-]*['"]\s*\)$/.test(locator);
+      const needsReview = /^要確認\s*[:：]/.test(locator) || !confirmedCandidate;
+      if (needsReview) locatorNeedsReview = true;
+      return needsReview && !/^要確認\s*[:：]/.test(locator) ? `要確認: ${locator}` : locator;
+    };
+    const steps = item.steps.slice(0, 5).map((step, stepIndex) => ({
+      actionTarget: requiredText(step?.actionTarget, `テストケース${caseIndex + 1}の操作対象${stepIndex + 1}`, 240),
+      actionLocator: normalizeLocator(step?.actionLocator, `テストケース${caseIndex + 1}の操作ロケーター${stepIndex + 1}`),
+      action: requiredText(step?.action, `テストケース${caseIndex + 1}の手順${stepIndex + 1}`),
+      expectedTarget: requiredText(step?.expectedTarget, `テストケース${caseIndex + 1}の確認対象${stepIndex + 1}`, 240),
+      expectedLocator: normalizeLocator(step?.expectedLocator, `テストケース${caseIndex + 1}の確認ロケーター${stepIndex + 1}`),
+      expected: requiredText(step?.expected, `テストケース${caseIndex + 1}の期待結果${stepIndex + 1}`)
+    }));
     return {
       viewpointId,
       title: requiredText(item.title, `テストケース${caseIndex + 1}のtitle`, 240),
@@ -51,11 +73,8 @@ function normalizeTestCaseResult(result, viewpoints) {
       priority: priorities.has(item.priority) ? item.priority : '中',
       preconditions: requiredText(item.preconditions, `テストケース${caseIndex + 1}のpreconditions`),
       testData: requiredText(item.testData, `テストケース${caseIndex + 1}のtestData`),
-      steps: item.steps.slice(0, 5).map((step, stepIndex) => ({
-        action: requiredText(step?.action, `テストケース${caseIndex + 1}の手順${stepIndex + 1}`),
-        expected: requiredText(step?.expected, `テストケース${caseIndex + 1}の期待結果${stepIndex + 1}`)
-      })),
-      state: states.has(item.state) ? item.state : 'review'
+      steps,
+      state: states.has(item.state) && !locatorNeedsReview ? item.state : 'review'
     };
   }).filter(Boolean);
   const missing = viewpoints.filter((item) => !seen.has(item.id));

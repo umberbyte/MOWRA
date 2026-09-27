@@ -26,9 +26,13 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["action", "expected"],
+              "required": ["actionTarget", "actionLocator", "action", "expectedTarget", "expectedLocator", "expected"],
               "properties": {
+                "actionTarget": { "type": "string", "maxLength": 240 },
+                "actionLocator": { "type": "string", "maxLength": 500 },
                 "action": { "type": "string", "maxLength": 1500 },
+                "expectedTarget": { "type": "string", "maxLength": 240 },
+                "expectedLocator": { "type": "string", "maxLength": 500 },
                 "expected": { "type": "string", "maxLength": 1500 }
               }
             }
