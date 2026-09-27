@@ -16,6 +16,28 @@ function externalServer(command, args, settings, label, configuredEnv = {}, conf
   return { command, args, cwd: configuredCwd || settings.runtimeDir, env };
 }
 
+function withoutCliOptions(args, names) {
+  const blocked = new Set(names);
+  const result = [];
+  for (let index = 0; index < args.length; index++) {
+    const value = String(args[index]);
+    const option = value.split('=', 1)[0];
+    if (!blocked.has(option)) {
+      result.push(value);
+      continue;
+    }
+    if (!value.includes('=') && index + 1 < args.length && !String(args[index + 1]).startsWith('--')) index++;
+  }
+  return result;
+}
+
+function playwrightServerEnvironment(configuredEnv = {}) {
+  const bypass = ['localhost', '127.0.0.1', '::1'];
+  const existing = configuredEnv.NO_PROXY || configuredEnv.no_proxy || process.env.NO_PROXY || process.env.no_proxy || '';
+  const noProxy = [...new Set([...String(existing).split(',').map((value) => value.trim()).filter(Boolean), ...bypass])].join(',');
+  return { ...configuredEnv, NO_PROXY: noProxy, no_proxy: noProxy };
+}
+
 function parseQuoted(value) {
   return value.replace(/\\'/g, "'").replace(/\\\\/g, '\\');
 }
@@ -114,7 +136,8 @@ function summarizeToolResult(result) {
 async function executeWebCases(testCases, settings) {
   const targetUrl = String(settings.targetUrl || '');
   if (!/^https?:\/\//i.test(targetUrl)) throw new Error('Webテストにはhttp/httpsの対象URLが必要です');
-  const server = externalServer(settings.playwrightMcpCommand, [...(settings.playwrightMcpArgs || []), '--headless', '--isolated', '--browser', settings.browser || 'msedge'], settings, 'Playwright MCP', settings.playwrightMcpEnv, settings.playwrightMcpCwd);
+  const configuredArgs = withoutCliOptions(settings.playwrightMcpArgs || [], ['--browser', '--proxy-server', '--proxy-bypass', '--headless', '--isolated']);
+  const server = externalServer(settings.playwrightMcpCommand, [...configuredArgs, '--headless', '--isolated', '--browser', settings.browser || 'msedge'], settings, 'Playwright MCP', playwrightServerEnvironment(settings.playwrightMcpEnv), settings.playwrightMcpCwd);
   return withStdioMcp(server, async (client) => {
     const tools = await client.listTools();
     if (!tools.tools.some((tool) => tool.name === 'browser_run_code_unsafe')) throw new Error('Playwright MCPにbrowser_run_code_unsafeツールがありません');
@@ -169,4 +192,4 @@ async function executeAutomation(request, runtime) {
   return results;
 }
 
-module.exports = { executeAutomation, executeWebCases, executeApiCases, validateAutomationCase, locatorCode, buildPlaywrightCode };
+module.exports = { executeAutomation, executeWebCases, executeApiCases, validateAutomationCase, locatorCode, buildPlaywrightCode, withoutCliOptions, playwrightServerEnvironment };

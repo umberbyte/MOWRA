@@ -8,7 +8,7 @@ const { serializeProject, deserializeProject } = require('../electron/project-fo
 const { sourceAdapters } = require('../electron/source-adapters.cjs');
 const { buildPrompt, compactText, formatDecisionQuestion, CUSTOMER_PROMPT_BUDGET, REFERENCE_PROMPT_BUDGET, MAX_VIEWPOINTS } = require('../electron/analysis-service.cjs');
 const { generateTestCases, buildTestCasePrompt, normalizeTestCaseResult, FAST_BATCH_SIZE } = require('../electron/test-case-service.cjs');
-const { executeAutomation, validateAutomationCase, locatorCode, buildPlaywrightCode } = require('../electron/automation-service.cjs');
+const { executeAutomation, validateAutomationCase, locatorCode, buildPlaywrightCode, withoutCliOptions, playwrightServerEnvironment } = require('../electron/automation-service.cjs');
 const { windowsCandidates } = require('../electron/cli-resolver.cjs');
 
 function writeMinimalPdf(filePath) {
@@ -134,6 +134,9 @@ async function run() {
   const playwrightCode = buildPlaywrightCode({ ...sample.testCases[0], state: 'agreed' }, 'https://example.jp');
   assert.match(playwrightCode, /actionCount !== 1/);
   assert.match(playwrightCode, /await actionTarget\.click/);
+  assert.deepEqual(withoutCliOptions(['cli.js', '--browser', 'msedge', '--proxy-server', 'http://127.0.0.1:8080', '--ignore-https-errors'], ['--browser', '--proxy-server']), ['cli.js', '--ignore-https-errors']);
+  assert.deepEqual(withoutCliOptions(['--proxy-server=http://127.0.0.1:8080', '--timeout-action', '15000'], ['--proxy-server']), ['--timeout-action', '15000']);
+  assert.match(playwrightServerEnvironment({ NO_PROXY: 'example.test' }).NO_PROXY, /example\.test,localhost,127\.0\.0\.1,::1/);
 
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mowra-formats-'));
   try {
