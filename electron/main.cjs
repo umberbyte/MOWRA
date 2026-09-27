@@ -194,6 +194,7 @@ ipcMain.handle('ai:analyze-files', async (_event, request) => analyzeDocuments(r
   userDataPath: app.getPath('userData'),
   schemaPath: path.join(__dirname, 'analysis-schema.json'),
   reasoningEffort: 'low',
+  codexModel: 'gpt-6-luna',
   codexCommand: await resolveCliCommand('codex'),
   claudeCommand: await resolveCliCommand('claude')
 }));
@@ -202,6 +203,7 @@ ipcMain.handle('ai:generate-test-cases', async (_event, request) => generateTest
   userDataPath: app.getPath('userData'),
   schemaPath: path.join(__dirname, 'test-case-schema.json'),
   reasoningEffort: 'low',
+  codexModel: 'gpt-6-luna',
   codexCommand: await resolveCliCommand('codex'),
   claudeCommand: await resolveCliCommand('claude')
 }));

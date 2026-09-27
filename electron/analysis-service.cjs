@@ -20,8 +20,10 @@ function runProcess(command, args, input, options = {}) {
     let stderr = '';
     const timer = setTimeout(() => {
       child.kill();
-      reject(new Error('AI分析がタイムアウトしました'));
-    }, TIMEOUT_MS);
+      const error = new Error('AI分析がタイムアウトしました');
+      error.code = 'AI_TIMEOUT';
+      reject(error);
+    }, options.timeoutMs || TIMEOUT_MS);
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
     child.stdout.on('data', (chunk) => { stdout += chunk; });
@@ -141,7 +143,8 @@ async function analyzeWithCodex(prompt, runtime) {
   await fs.copyFile(runtime.schemaPath, schemaPath);
   const reasoningArgs = runtime.reasoningEffort ? ['-c', `model_reasoning_effort="${runtime.reasoningEffort}"`] : [];
   const result = await runProcess(runtime.codexCommand || 'codex', [
-    'exec', ...reasoningArgs, '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only',
+    'exec', '--ignore-user-config', '--disable', 'plugins', '--disable', 'apps', '--disable', 'browser_use', '--disable', 'computer_use',
+    '-m', runtime.codexModel || 'gpt-6-luna', ...reasoningArgs, '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only',
     '--output-schema', schemaPath, '--color', 'never', '-'
   ], prompt, { cwd: runtimeDir });
   return parseJsonText(result.stdout);

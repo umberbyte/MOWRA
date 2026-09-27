@@ -1,6 +1,6 @@
 {
   "name": "mowra-desktop",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": true,
   "description": "AI-assisted test viewpoint design desktop application",
   "main": "electron/main.cjs",
