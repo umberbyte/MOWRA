@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="仕様が曖昧なWeb案件でも、根拠と合意状態を残しながらテスト観点を設計するワークスペース。">
+  <title>ScopeCraft — テスト観点設計</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23172622'/%3E%3Cpath d='M18 18h28v7H25v8h17v7H25v6h21v7H18z' fill='%23d7ff62'/%3E%3C/svg%3E">
+  <style>
+    :root{--ink:#172622;--muted:#60706b;--paper:#f4f6f2;--panel:#fff;--line:#dce2dc;--acid:#d7ff62;--acid-strong:#b7e72e;--teal:#0d776e;--blue:#dbeafa;--amber:#fff0bd;--red:#ffe3dc;--shadow:0 14px 40px rgba(23,38,34,.08);font-family:"Yu Gothic UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;color:var(--ink);background:var(--paper)}
+    *{box-sizing:border-box}body{margin:0;min-width:320px}button,input,textarea,select{font:inherit;color:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid rgba(13,119,110,.28);outline-offset:2px}
+    .app{min-height:100vh;display:grid;grid-template-columns:248px minmax(0,1fr)}
+    aside{background:var(--ink);color:#fff;padding:26px 20px;display:flex;flex-direction:column;gap:30px;position:sticky;top:0;height:100vh}
+    .brand{display:flex;gap:12px;align-items:center;font-weight:800;letter-spacing:.01em}.brand-mark{width:36px;height:36px;background:var(--acid);color:var(--ink);display:grid;place-items:center;border-radius:10px;font-weight:900}.brand small{display:block;color:#9bb0a9;font-weight:500;font-size:.7rem;margin-top:2px}
+    nav{display:grid;gap:8px}.nav-item{padding:13px 12px;border-radius:10px;display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:8px;color:#b8c7c2;font-size:.88rem}.nav-item.active{background:#2a3c37;color:#fff}.nav-num{width:24px;height:24px;border-radius:50%;border:1px solid #5b7069;display:grid;place-items:center;font-size:.75rem}.nav-item.active .nav-num{background:var(--acid);border-color:var(--acid);color:var(--ink);font-weight:800}.nav-tag{font-size:.67rem;color:var(--acid)}
+    .side-note{margin-top:auto;border-top:1px solid #354a43;padding-top:18px;color:#9bb0a9;font-size:.77rem;line-height:1.7}.side-note strong{display:block;color:#fff;margin-bottom:3px}
+    main{min-width:0}.topbar{height:68px;background:rgba(255,255,255,.87);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:0 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}.crumb{font-size:.82rem;color:var(--muted)}.crumb strong{color:var(--ink)}.save-state{font-size:.75rem;color:var(--muted);display:flex;gap:8px;align-items:center}.save-dot{width:7px;height:7px;border-radius:50%;background:#54ad73}
+    .workspace{padding:28px 32px 56px;max-width:1500px;margin:auto}.headline{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:24px}.headline h1{font-size:clamp(1.55rem,2.5vw,2.25rem);letter-spacing:-.04em;margin:0 0 7px}.headline p{color:var(--muted);margin:0;font-size:.88rem}.step-pill{background:var(--ink);color:#fff;border-radius:999px;padding:8px 13px;font-size:.74rem;white-space:nowrap}.step-pill b{color:var(--acid)}
+    .setup{display:grid;grid-template-columns:minmax(300px,1.02fr) minmax(320px,.98fr);gap:16px;margin-bottom:18px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 3px 18px rgba(23,38,34,.035)}.card-head{padding:18px 20px 0;display:flex;align-items:center;justify-content:space-between}.card h2{font-size:.95rem;margin:0}.card-body{padding:16px 20px 20px}.label{display:block;font-size:.74rem;font-weight:700;margin-bottom:7px}.field{width:100%;border:1px solid #ccd5cf;border-radius:9px;background:#fbfcfa;padding:11px 12px;font-size:.86rem}.field:hover{border-color:#9eada5}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stack{display:grid;gap:13px}.mode-select{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mode{border:1px solid var(--line);border-radius:10px;background:#fff;padding:11px;text-align:left;position:relative}.mode.active{background:#f5ffe0;border-color:var(--acid-strong);box-shadow:inset 0 0 0 1px var(--acid-strong)}.mode strong{display:block;font-size:.8rem;margin-bottom:3px}.mode span{font-size:.68rem;color:var(--muted);line-height:1.45}.mode.active:after{content:'✓';position:absolute;right:10px;top:9px;color:var(--teal);font-weight:900}
+    textarea.field{resize:vertical;min-height:88px;line-height:1.55}.hint{font-size:.68rem;color:var(--muted);margin-top:6px;line-height:1.5}.source-row{display:flex;gap:8px;flex-wrap:wrap}.source-chip{font-size:.7rem;border:1px solid var(--line);padding:6px 9px;border-radius:999px;background:#f7f9f6}.source-chip.on{background:var(--blue);border-color:#b6d5f2}.generate{border:0;border-radius:10px;background:var(--ink);color:#fff;padding:12px 18px;font-weight:800;font-size:.82rem;display:flex;gap:9px;align-items:center;justify-content:center}.generate:hover{background:#263a34}.generate .spark{color:var(--acid)}
+    .metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}.metric{background:#fff;border:1px solid var(--line);border-radius:13px;padding:14px 16px}.metric span{font-size:.69rem;color:var(--muted);display:block}.metric strong{font-size:1.45rem;letter-spacing:-.03em;display:block;margin-top:5px}.metric small{font-size:.66rem;color:var(--teal)}
+    .board{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}.toolbar{padding:15px 18px;display:flex;gap:10px;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}.filters{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.filter{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 11px;font-size:.7rem}.filter.active{background:var(--ink);color:#fff;border-color:var(--ink)}.actions{display:flex;gap:8px}.secondary{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 11px;font-size:.72rem}.primary{border:0;background:var(--acid);border-radius:8px;padding:9px 12px;font-weight:800;font-size:.72rem}.primary:hover{background:var(--acid-strong)}
+    .table-wrap{overflow:auto}.table{min-width:960px}.row{display:grid;grid-template-columns:64px minmax(180px,1.25fr) minmax(220px,1.7fr) 135px 100px 112px;align-items:center;border-bottom:1px solid #edf0ed}.row:last-child{border-bottom:0}.row.header{background:#f8faf7;color:var(--muted);font-size:.66rem;font-weight:800}.cell{padding:12px 14px}.row:not(.header){font-size:.78rem;transition:.16s}.row:not(.header):hover{background:#fbfdf8}.id{font-family:Consolas,monospace;color:var(--muted);font-size:.68rem}.title{font-weight:800;margin-bottom:3px}.sub{color:var(--muted);font-size:.68rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.basis{display:flex;gap:5px;flex-wrap:wrap}.tag{padding:4px 6px;border-radius:5px;background:#eef2ee;font-size:.62rem}.tag.guide{background:var(--blue)}.tag.hypo{background:var(--amber)}.priority{font-weight:800}.priority.high{color:#a04631}.state{border:0;border-radius:999px;padding:6px 8px;font-size:.66rem;font-weight:800}.state.draft{background:#eef1ef;color:#637069}.state.review{background:var(--amber);color:#735810}.state.agreed{background:#ddf5e5;color:#24673b}.state.out{background:#eee;color:#777}.more{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 9px;font-size:.68rem}.empty{padding:46px;text-align:center;color:var(--muted)}.empty b{display:block;color:var(--ink);margin-bottom:7px}
+    dialog{border:0;border-radius:18px;padding:0;width:min(680px,calc(100% - 32px));box-shadow:0 30px 90px rgba(10,25,20,.28)}dialog::backdrop{background:rgba(15,28,24,.46);backdrop-filter:blur(3px)}.modal-head{padding:20px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.modal-head h2{font-size:1rem;margin:0}.close{border:0;background:transparent;font-size:1.2rem}.modal-body{padding:20px 22px;display:grid;gap:15px;max-height:65vh;overflow:auto}.modal-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}.danger{border:0;background:transparent;color:#a04631;font-size:.73rem}.toast{position:fixed;right:24px;bottom:24px;background:var(--ink);color:#fff;padding:13px 16px;border-radius:10px;font-size:.78rem;box-shadow:var(--shadow);transform:translateY(80px);opacity:0;transition:.25s;z-index:20}.toast.show{transform:translateY(0);opacity:1}
+    @media(max-width:980px){.app{grid-template-columns:76px minmax(0,1fr)}aside{padding:22px 12px}.brand-text,.nav-label,.nav-tag,.side-note{display:none}.brand{justify-content:center}.nav-item{display:flex;justify-content:center;padding:12px}.setup{grid-template-columns:1fr}.workspace{padding:24px 20px}.topbar{padding:0 20px}}
+    @media(max-width:640px){.app{display:block}aside{height:auto;position:static;padding:12px 16px;flex-direction:row;align-items:center}.brand-text{display:block}nav{margin-left:auto;display:flex}.nav-item:not(.active){display:none}.nav-item.active{padding:7px 10px}.nav-label{display:block}.workspace{padding:20px 14px 40px}.topbar{height:54px;padding:0 14px}.headline{align-items:flex-start;flex-direction:column}.setup{grid-template-columns:1fr}.grid2,.mode-select{grid-template-columns:1fr}.metric-row{grid-template-columns:1fr 1fr}.toolbar{align-items:flex-start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.save-state span:last-child{display:none}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand"><div class="brand-mark">S</div><div class="brand-text">ScopeCraft<small>AI TEST DESIGN</small></div></div>
+      <nav aria-label="MVPの工程">
+        <div class="nav-item active"><span class="nav-num">1</span><span class="nav-label">テスト観点の設計</span><span class="nav-tag">進行中</span></div>
+        <div class="nav-item"><span class="nav-num">2</span><span class="nav-label">テストケースの設計</span></div>
+        <div class="nav-item"><span class="nav-num">3</span><span class="nav-label">自動テスト</span></div>
+      </nav>
+      <div class="side-note"><strong>Phase 1 MVP</strong>仕様・現物・ガイドラインの根拠を分け、顧客と観点を合意します。</div>
+    </aside>
+    <main>
+      <header class="topbar"><div class="crumb">案件 / <strong id="crumbName">コーポレートサイト改修</strong></div><div class="save-state"><span class="save-dot"></span><span>ブラウザーに保存済み</span></div></header>
+      <div class="workspace">
+        <div class="headline"><div><h1>テスト観点を組み立てる</h1><p>現物から得た事実と、一般的な期待を分けて合意可能な観点にします。</p></div><div class="step-pill"><b>1 / 3</b>　観点設計</div></div>
+        <section class="setup" aria-label="案件と分析条件">
+          <article class="card"><div class="card-head"><h2>案件の前提</h2><span class="tag">自動保存</span></div><div class="card-body stack">
+            <div class="grid2"><label><span class="label">案件名</span><input id="projectName" class="field" value="コーポレートサイト改修"></label><label><span class="label">調査対象URL</span><input id="targetUrl" class="field" type="url" placeholder="https://example.jp"></label></div>
+            <div><span class="label">設計モード</span><div class="mode-select"><button class="mode" data-mode="spec"><strong>仕様準拠</strong><span>有効な文書を期待結果の主な根拠にする</span></button><button class="mode active" data-mode="ambiguous"><strong>あいまいテスト</strong><span>現物・利用目的・UX指針から仮説を作る</span></button></div></div>
+            <label><span class="label">分かっていること・顧客の説明</span><textarea id="context" class="field" placeholder="例：問い合わせ獲得が目的。スマートフォン利用が多い。古い仕様書はあるが、現在の画面と一致しない。">問い合わせ獲得が主な目的。スマートフォンからの利用が多い。既存の仕様書は更新されていない。</textarea><span class="hint">入力した内容は「顧客説明」として、AIの仮説と区別して扱います。</span></label>
+          </div></article>
+          <article class="card"><div class="card-head"><h2>分析に使う根拠</h2><span class="tag guide">4種類</span></div><div class="card-body stack">
+            <div><span class="label">参照する情報</span><div class="source-row" id="sourceChips"><button class="source-chip on" data-source="現行画面">現行画面</button><button class="source-chip on" data-source="顧客説明">顧客説明</button><button class="source-chip on" data-source="UX指針">UX指針</button><button class="source-chip on" data-source="WCAG 2.2">WCAG 2.2</button><button class="source-chip" data-source="旧仕様書">旧仕様書</button></div></div>
+            <label><span class="label">今回の重点</span><select id="focus" class="field"><option value="inquiry">問い合わせ・入力フォーム</option><option value="search">検索・情報到達</option><option value="navigation">ナビゲーション・回遊</option><option value="general">サイト全般</option></select></label>
+            <button id="generateBtn" class="generate"><span class="spark">✦</span>観点案を生成する</button>
+            <p class="hint">生成内容は提案です。採用する観点を顧客と確認し、「合意済み」にすると次工程へ渡せます。</p>
+          </div></article>
+        </section>
+        <section class="metric-row" aria-label="観点の集計">
+          <div class="metric"><span>観点数</span><strong id="countAll">0</strong><small>現在の版</small></div><div class="metric"><span>高優先度</span><strong id="countHigh">0</strong><small>影響が大きい項目</small></div><div class="metric"><span>要確認</span><strong id="countReview">0</strong><small>顧客判断が必要</small></div><div class="metric"><span>合意済み</span><strong id="countAgreed">0</strong><small id="agreedRate">0% 完了</small></div>
+        </section>
+        <section class="board" aria-label="テスト観点一覧">
+          <div class="toolbar"><div class="filters"><button class="filter active" data-filter="all">すべて</button><button class="filter" data-filter="high">高優先度</button><button class="filter" data-filter="review">要確認</button><button class="filter" data-filter="agreed">合意済み</button></div><div class="actions"><button id="exportBtn" class="secondary">CSV出力</button><button id="addBtn" class="primary">＋ 観点を追加</button></div></div>
+          <div class="table-wrap"><div class="table" id="viewpointTable"></div></div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <dialog id="editDialog">
+    <form id="editForm" method="dialog"><div class="modal-head"><h2 id="dialogTitle">観点を編集</h2><button type="button" class="close" aria-label="閉じる">×</button></div>
+      <div class="modal-body">
+        <input type="hidden" id="editId"><div class="grid2"><label><span class="label">対象</span><input id="editTarget" class="field" required></label><label><span class="label">優先度</span><select id="editPriority" class="field"><option>高</option><option>中</option><option>低</option></select></label></div>
+        <label><span class="label">テスト観点</span><input id="editTitle" class="field" required></label><label><span class="label">確認する内容</span><textarea id="editDescription" class="field" required></textarea></label>
+        <div class="grid2"><label><span class="label">主な根拠</span><select id="editBasis" class="field"><option>顧客説明</option><option>現行画面</option><option>UX指針</option><option>WCAG 2.2</option><option>AIの仮説</option></select></label><label><span class="label">合意状態</span><select id="editState" class="field"><option value="draft">提案中</option><option value="review">要確認</option><option value="agreed">合意済み</option><option value="out">対象外</option></select></label></div>
+        <label><span class="label">顧客への確認事項</span><textarea id="editQuestion" class="field" placeholder="判断が必要な点を、顧客が答えやすい質問にします。"></textarea></label>
+      </div><div class="modal-foot"><button type="button" id="deleteBtn" class="danger">この観点を削除</button><div><button type="button" class="secondary close">キャンセル</button> <button class="primary" value="save">保存する</button></div></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status"></div>
+  <script>
+    const STORAGE='scopecraft-phase1-v1';
+    const seeds={
+      inquiry:[
+        ['問い合わせフォーム','必須情報を入力して送信できる','利用者が入力を完了し、受付結果を確認できること。','高','顧客説明','review','受付完了は画面表示だけでよいですか。受付記録や自動返信も確認対象にしますか。'],
+        ['入力エラー','誤りの箇所と直し方が分かる','該当項目・理由・修正方法が示され、入力済みの内容が保持されること。','高','UX指針','draft','入力内容を保持すべき範囲に例外はありますか。'],
+        ['送信操作','二重送信を防止できる','連続クリックや通信待ちの間に、同じ問い合わせが重複登録されないこと。','高','AIの仮説','review','重複判定は画面操作だけでなく受付記録でも確認できますか。'],
+        ['入力フォーム','入力項目の意味が分かる','ラベル、必須表示、入力例から求められる情報を判断できること。','中','WCAG 2.2','draft',''],
+        ['完了画面','次に何が起こるか分かる','受付後の連絡方法や目安など、利用者が次の行動を判断できること。','中','UX指針','draft','連絡までの目安を表示する運用ですか。'],
+        ['スマートフォン表示','主要操作を小さい画面でも完了できる','入力欄、エラー、送信ボタンが隠れず、拡大せずに操作できること。','高','顧客説明','draft','対象とする端末または画面幅を決めますか。']
+      ],
+      search:[
+        ['サイト内検索','目的の情報を検索できる','代表的な掲載情報を、利用者が使う語句から発見できること。','高','顧客説明','review','検索対象と除外対象を確認してください。'],
+        ['検索結果','結果と検索条件が対応する','入力した語句と結果件数が示され、各結果の違いを判断できること。','高','UX指針','draft',''],
+        ['検索結果なし','該当なしから回復できる','検索結果がない理由と、別の検索方法または移動先が示されること。','中','UX指針','draft',''],
+        ['表記ゆれ','一般的な表記の違いを扱える','全半角・大文字小文字など、合意した表記差でも期待する情報に到達できること。','中','AIの仮説','review','吸収すべき表記ゆれをどこまで対象にしますか。']
+      ],
+      navigation:[
+        ['主要ナビゲーション','主要情報へ迷わず移動できる','現在地と移動先が理解でき、主要ページへ一貫した操作で到達できること。','高','UX指針','draft',''],
+        ['リンク表現','リンク先を事前に予測できる','リンク名から遷移先の内容を判断でき、異なる機能に同じ名称を使わないこと。','中','WCAG 2.2','draft',''],
+        ['戻る操作','前の作業状態へ戻れる','詳細から一覧に戻ったとき、利用者が必要とする位置や条件が保持されること。','中','AIの仮説','review','保持すべき検索条件やスクロール位置を確認してください。'],
+        ['外部リンク','サイト外への移動を理解できる','外部サイトや別ウィンドウへの移動を、利用者が予測できること。','低','UX指針','draft','']
+      ],
+      general:[
+        ['主要導線','サイトの目的を達成できる','主要な利用目的を開始し、途中で迷わず完了できること。','高','顧客説明','review','最も重要な利用目的を1つ選んでください。'],
+        ['状態表示','処理中・完了・失敗が分かる','操作に対する応答が適切なタイミングで表示されること。','高','UX指針','draft',''],
+        ['一貫性','同じ表現と操作が同じ意味を持つ','画面間で用語、ボタン、表示形式の意味が一貫していること。','中','UX指針','draft',''],
+        ['エラー回復','失敗しても作業を続けられる','問題の原因と解決方法が示され、入力や作業をやり直せること。','高','UX指針','draft',''],
+        ['キーボード操作','主要機能をキーボードで操作できる','フォーカス位置が分かり、論理的な順序で主要操作を完了できること。','中','WCAG 2.2','draft','']
+      ]
+    };
+    let state=load()||{mode:'ambiguous',sources:['現行画面','顧客説明','UX指針','WCAG 2.2'],filter:'all',items:[]};
+    const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+    function load(){try{return JSON.parse(localStorage.getItem(STORAGE))}catch{return null}}
+    function persist(){state.projectName=$('#projectName').value;state.targetUrl=$('#targetUrl').value;state.context=$('#context').value;state.focus=$('#focus').value;localStorage.setItem(STORAGE,JSON.stringify(state));$('#crumbName').textContent=state.projectName||'名称未設定'}
+    function restore(){if(state.projectName)$('#projectName').value=state.projectName;if(state.targetUrl)$('#targetUrl').value=state.targetUrl;if(state.context)$('#context').value=state.context;if(state.focus)$('#focus').value=state.focus;$$('.mode').forEach(x=>x.classList.toggle('active',x.dataset.mode===state.mode));$$('.source-chip').forEach(x=>x.classList.toggle('on',state.sources.includes(x.dataset.source)));$$('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===state.filter));persist();render()}
+    function esc(v=''){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+    function labelState(v){return{draft:'提案中',review:'要確認',agreed:'合意済み',out:'対象外'}[v]}
+    function visible(item){return state.filter==='all'||state.filter==='high'&&item.priority==='高'||state.filter==='review'&&item.state==='review'||state.filter==='agreed'&&item.state==='agreed'}
+    function render(){const rows=state.items.filter(visible);$('#viewpointTable').innerHTML=`<div class="row header"><div class="cell">ID</div><div class="cell">対象 / 観点</div><div class="cell">確認する内容</div><div class="cell">根拠</div><div class="cell">優先度</div><div class="cell">合意状態</div></div>`+(rows.length?rows.map(item=>`<div class="row"><div class="cell id">${esc(item.id)}</div><div class="cell"><div class="title">${esc(item.title)}</div><div class="sub">${esc(item.target)}</div></div><div class="cell"><div>${esc(item.description)}</div>${item.question?`<div class="sub">確認：${esc(item.question)}</div>`:''}</div><div class="cell"><div class="basis"><span class="tag ${item.basis.includes('UX')||item.basis.includes('WCAG')?'guide':item.basis.includes('仮説')?'hypo':''}">${esc(item.basis)}</span></div></div><div class="cell priority ${item.priority==='高'?'high':''}">${item.priority}</div><div class="cell"><button class="state ${item.state}" data-open="${item.id}">${labelState(item.state)}</button></div></div>`).join(''):`<div class="empty"><b>まだ観点がありません</b>案件の前提を入力し、「観点案を生成する」を押してください。</div>`);$('#countAll').textContent=state.items.length;$('#countHigh').textContent=state.items.filter(x=>x.priority==='高').length;$('#countReview').textContent=state.items.filter(x=>x.state==='review').length;const active=state.items.filter(x=>x.state!=='out').length,agreed=state.items.filter(x=>x.state==='agreed').length;$('#countAgreed').textContent=agreed;$('#agreedRate').textContent=(active?Math.round(agreed/active*100):0)+'% 完了';document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEdit(b.dataset.open))}
+    function generate(focusInput){const focus=focusInput||$('#focus').value;if(!Object.hasOwn(seeds,focus))throw new Error('未定義の重点領域です');const chosen=seeds[focus];const existing=new Set(state.items.map(x=>x.title));let n=state.items.length,created=0;chosen.forEach(v=>{if(!existing.has(v[1])){state.items.push({id:'VP-'+String(++n).padStart(3,'0'),target:v[0],title:v[1],description:v[2],priority:v[3],basis:v[4],state:v[5],question:v[6]});created++}});persist();render();toast(created?created+'件の観点案を追加しました':'追加できる新しい観点はありませんでした');return created}
+    function openEdit(id){const item=state.items.find(x=>x.id===id);$('#dialogTitle').textContent=item?'観点を編集':'観点を追加';$('#editId').value=item?.id||'';$('#editTarget').value=item?.target||'';$('#editTitle').value=item?.title||'';$('#editDescription').value=item?.description||'';$('#editPriority').value=item?.priority||'中';$('#editBasis').value=item?.basis||'顧客説明';$('#editState').value=item?.state||'draft';$('#editQuestion').value=item?.question||'';$('#deleteBtn').style.visibility=item?'visible':'hidden';$('#editDialog').showModal()}
+    function saveEdit(){const id=$('#editId').value;let item=state.items.find(x=>x.id===id);if(!item){item={id:'VP-'+String(state.items.length+1).padStart(3,'0')};state.items.push(item)}Object.assign(item,{target:$('#editTarget').value,title:$('#editTitle').value,description:$('#editDescription').value,priority:$('#editPriority').value,basis:$('#editBasis').value,state:$('#editState').value,question:$('#editQuestion').value});persist();render();toast('観点を保存しました')}
+    function exportCsv(){if(!state.items.length)return toast('出力する観点がありません');const columns=['ID','対象','テスト観点','確認する内容','主な根拠','優先度','合意状態','顧客への確認事項'];const q=v=>'"'+String(v??'').replaceAll('"','""')+'"';const csv='\ufeff'+[columns,...state.items.map(x=>[x.id,x.target,x.title,x.description,x.basis,x.priority,labelState(x.state),x.question])].map(r=>r.map(q).join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=(state.projectName||'test-viewpoints')+'.csv';a.click();URL.revokeObjectURL(a.href);toast('観点表をCSVで出力しました')}
+    function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t.timer);t.timer=setTimeout(()=>t.classList.remove('show'),2600)}
+    ['projectName','targetUrl','context','focus'].forEach(id=>$('#'+id).addEventListener('input',persist));$$('.mode').forEach(b=>b.onclick=()=>{state.mode=b.dataset.mode;$$('.mode').forEach(x=>x.classList.toggle('active',x===b));persist()});$$('.source-chip').forEach(b=>b.onclick=()=>{b.classList.toggle('on');state.sources=$$('.source-chip.on').map(x=>x.dataset.source);persist()});$$('.filter').forEach(b=>b.onclick=()=>{state.filter=b.dataset.filter;$$('.filter').forEach(x=>x.classList.toggle('active',x===b));persist();render()});$('#generateBtn').onclick=generate;$('#addBtn').onclick=()=>openEdit();$('#exportBtn').onclick=exportCsv;$$('.close').forEach(b=>b.onclick=()=>$('#editDialog').close());$('#editForm').addEventListener('submit',e=>{if(e.submitter?.value==='save')saveEdit()});$('#deleteBtn').onclick=()=>{const id=$('#editId').value;state.items=state.items.filter(x=>x.id!==id);persist();render();$('#editDialog').close();toast('観点を削除しました')};
+    function registerWebMCP(){const mc=document.modelContext;if(!mc?.registerTool)return;mc.registerTool({name:'generate_test_viewpoints',title:'テスト観点案を生成',description:'現在選択中の重点領域について、画面上と同じテスト観点案を生成します。',inputSchema:{type:'object',properties:{focus:{type:'string',enum:['inquiry','search','navigation','general']}},required:['focus'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:async input=>{if(!input||typeof input.focus!=='string'||!Object.hasOwn(seeds,input.focus))throw new Error('focusには定義済みの重点領域を指定してください');$('#focus').value=input.focus;const created=generate(input.focus);return{created,total:state.items.length,reviewRequired:state.items.filter(x=>x.state==='review').length}}});mc.registerTool({name:'read_viewpoint_agreement_summary',title:'観点の合意状況を確認',description:'現在のテスト観点数と顧客合意の進捗を返します。',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute:async()=>({total:state.items.length,agreed:state.items.filter(x=>x.state==='agreed').length,reviewRequired:state.items.filter(x=>x.state==='review').length})})}
+    restore();registerWebMCP();
+  </script>
+</body>
+</html>
