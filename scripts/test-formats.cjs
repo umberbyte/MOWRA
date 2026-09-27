@@ -8,7 +8,7 @@ const { serializeProject, deserializeProject } = require('../electron/project-fo
 const { sourceAdapters } = require('../electron/source-adapters.cjs');
 const { buildPrompt, compactText, formatDecisionQuestion, CUSTOMER_PROMPT_BUDGET, REFERENCE_PROMPT_BUDGET, MAX_VIEWPOINTS } = require('../electron/analysis-service.cjs');
 const { generateTestCases, buildTestCasePrompt, normalizeTestCaseResult, FAST_BATCH_SIZE } = require('../electron/test-case-service.cjs');
-const { executeAutomation, validateAutomationCase, locatorCode, buildPlaywrightCode, withoutCliOptions, playwrightServerEnvironment } = require('../electron/automation-service.cjs');
+const { executeAutomation, validateAutomationCase, locatorCode, buildPlaywrightCode, parsePlaywrightOutput, friendlyPlaywrightError, withoutCliOptions, playwrightServerEnvironment } = require('../electron/automation-service.cjs');
 const { windowsCandidates } = require('../electron/cli-resolver.cjs');
 
 function writeMinimalPdf(filePath) {
@@ -132,8 +132,13 @@ async function run() {
   assert.equal(blockedResults[0].status, 'blocked');
   assert.match(blockedResults[0].summary, /未確定/);
   const playwrightCode = buildPlaywrightCode({ ...sample.testCases[0], state: 'agreed' }, 'https://example.jp');
-  assert.match(playwrightCode, /actionCount !== 1/);
+  assert.match(playwrightCode, /MOWRA_ACTION_NOT_FOUND/);
   assert.match(playwrightCode, /await actionTarget\.click/);
+  assert.match(playwrightCode, /resolveAcrossSite/);
+  assert.match(playwrightCode, /sameOriginRoutes/);
+  assert.match(playwrightCode, /repairs\.push/);
+  assert.match(friendlyPlaywrightError('Error: MOWRA_ACTION_NOT_FOUND|1|商品検索入力欄|4'), /4画面探索[\s\S]*商品検索入力欄/);
+  assert.deepEqual(parsePlaywrightOutput({ content: [{ type: 'text', text: '### Result\n{"passed":true,"repairs":[]}\n### Ran Playwright code\ncode' }] }).value, { passed: true, repairs: [] });
   assert.deepEqual(withoutCliOptions(['cli.js', '--browser', 'msedge', '--proxy-server', 'http://127.0.0.1:8080', '--ignore-https-errors'], ['--browser', '--proxy-server']), ['cli.js', '--ignore-https-errors']);
   assert.deepEqual(withoutCliOptions(['--proxy-server=http://127.0.0.1:8080', '--timeout-action', '15000'], ['--proxy-server']), ['--timeout-action', '15000']);
   assert.match(playwrightServerEnvironment({ NO_PROXY: 'example.test' }).NO_PROXY, /example\.test,localhost,127\.0\.0\.1,::1/);

@@ -21,6 +21,8 @@ ${JSON.stringify(compactViewpoints)}
 - 各viewpointIdにつき、最も重要で代表的なケースを必ず1件だけ生成する。
 - 元のviewpointIdと優先度を維持する。
 - 手順は判定に必要な最短の1〜3段階にし、各操作に観察可能な期待結果を書く。
+- 入力や選択だけでは結果が更新されない画面を想定し、検索・送信・適用・確定など結果を発生させる操作を省略しない。
+- 事前条件に特定画面の表示が必要な場合でも、利用者がトップページから到達できる画面ならAIが遷移先を推定し、最初の操作対象をその画面で特定できる表現にする。
 - 各手順の操作対象と確認対象をDOM上で1件に特定できるPlaywrightロケーター候補にする。
 - ロケーターは getByRole(..., { name: ..., exact: true })、getByLabel(..., { exact: true })、getByTestId(...)、一意なidの順で優先する。button、.btn、部分一致テキストだけの曖昧な指定は禁止する。
 - actionTarget/actionLocatorは操作する部品、expectedTarget/expectedLocatorは期待結果を観察する部品またはテキストを示す。
