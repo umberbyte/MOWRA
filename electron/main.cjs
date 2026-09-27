@@ -44,6 +44,12 @@ async function loadAutoSave() {
 }
 
 async function saveProjectFile(filePath, project) {
+  try {
+    const existing = await fs.readFile(filePath, 'utf8');
+    if (existing.trim()) await fs.writeFile(`${filePath}.bak`, existing, 'utf8');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
   await writeTextAtomic(filePath, serializeProject(project));
 }
 
@@ -82,12 +88,15 @@ function createWindow({ smokeTest = false } = {}) {
           automationRunner: typeof window.desktopBridge?.executeAutomation === 'function',
           caseWorkspace: Boolean(document.querySelector('#caseWorkspace')),
           caseGenerateButton: Boolean(document.querySelector('#generateCasesBtn')),
+          caseGenerateFunction: typeof generateCases === 'function',
           automationWorkspace: Boolean(document.querySelector('#automationWorkspace')),
+          automationFunction: typeof runAutomation === 'function',
           title: document.title,
           providerStatus: document.querySelector('#providerStatus')?.textContent || ''
-        }), 400))`);
+        }), 1000))`);
         console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
-        app.exit(result.bridge && result.filePicker && result.referencePicker && result.analyzer && result.caseGenerator && result.automationRunner && result.caseWorkspace && result.caseGenerateButton && result.automationWorkspace && result.title.startsWith('MOWRA') ? 0 : 1);
+        const providerReady = result.providerStatus && result.providerStatus !== '利用状況を確認中';
+        app.exit(result.bridge && result.filePicker && result.referencePicker && result.analyzer && result.caseGenerator && result.automationRunner && result.caseWorkspace && result.caseGenerateButton && result.caseGenerateFunction && result.automationWorkspace && result.automationFunction && providerReady && result.title.startsWith('MOWRA') ? 0 : 1);
       } catch (error) {
         console.error('SMOKE_TEST_FAILED', error);
         app.exit(1);
@@ -177,8 +186,8 @@ ipcMain.handle('automation:select-bruno-collection', async () => {
 });
 
 ipcMain.handle('ai:capabilities', async () => ({
-  codex: Boolean(await resolveCliCommand('codex')),
-  claude: Boolean(await resolveCliCommand('claude'))
+  codex: await resolveCliCommand('codex'),
+  claude: await resolveCliCommand('claude')
 }));
 
 ipcMain.handle('ai:analyze-files', async (_event, request) => analyzeDocuments(request, {
@@ -197,9 +206,17 @@ ipcMain.handle('ai:generate-test-cases', async (_event, request) => generateTest
   claudeCommand: await resolveCliCommand('claude')
 }));
 
-ipcMain.handle('automation:execute', async (_event, request) => executeAutomation(request, {
-  userDataPath: app.getPath('userData')
-}));
+ipcMain.handle('automation:execute', async (_event, request) => {
+  const playwrightMcpCommand = await resolveCliCommand('playwright-mcp');
+  const brunoMcpCommand = await resolveCliCommand('bruno-mcp');
+  const bruCommand = await resolveCliCommand('bru');
+  const externalBinPath = [playwrightMcpCommand, brunoMcpCommand, bruCommand]
+    .filter(Boolean).map((value) => path.dirname(value)).join(path.delimiter);
+  return executeAutomation({
+    ...request,
+    settings: { ...(request.settings || {}), playwrightMcpCommand, brunoMcpCommand, externalBinPath }
+  }, { userDataPath: app.getPath('userData') });
+});
 
 app.whenReady().then(() => {
   app.setAppUserModelId('jp.mowra.desktop');

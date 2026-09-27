@@ -1,12 +1,18 @@
 const path = require('node:path');
 const { withStdioMcp, resultText } = require('./mcp-client.cjs');
 
-function packageFile(packageName, relativePath) {
-  return path.join(path.dirname(require.resolve(`${packageName}/package.json`)), relativePath);
-}
-
 function serverEnvironment(extra = {}) {
   return { ...process.env, ELECTRON_RUN_AS_NODE: '1', ...extra };
+}
+
+function externalServer(command, args, settings) {
+  if (!command) throw new Error('外部MCPサーバーが見つかりません。PCへのインストールとPATHを確認してください');
+  const env = serverEnvironment(settings.externalBinPath ? { PATH: `${settings.externalBinPath}${path.delimiter}${process.env.PATH || ''}` } : {});
+  if (process.platform === 'win32' && /\.(cmd|bat)$/i.test(command)) {
+    const quote = (value) => `"${String(value).replace(/"/g, '""')}"`;
+    return { command: process.env.ComSpec || 'cmd.exe', args: ['/d', '/s', '/c', [quote(command), ...args.map(quote)].join(' ')], cwd: settings.runtimeDir, env };
+  }
+  return { command, args, cwd: settings.runtimeDir, env };
 }
 
 function parseQuoted(value) {
@@ -105,12 +111,7 @@ function summarizeToolResult(result) {
 async function executeWebCases(testCases, settings) {
   const targetUrl = String(settings.targetUrl || '');
   if (!/^https?:\/\//i.test(targetUrl)) throw new Error('Webテストにはhttp/httpsの対象URLが必要です');
-  const server = {
-    command: process.execPath,
-    args: [packageFile('@playwright/mcp', 'cli.js'), '--headless', '--isolated', '--browser', settings.browser || 'msedge'],
-    cwd: settings.runtimeDir,
-    env: serverEnvironment()
-  };
+  const server = externalServer(settings.playwrightMcpCommand, ['--headless', '--isolated', '--browser', settings.browser || 'msedge'], settings);
   return withStdioMcp(server, async (client) => {
     const tools = await client.listTools();
     if (!tools.tools.some((tool) => tool.name === 'browser_run_code_unsafe')) throw new Error('Playwright MCPにbrowser_run_code_unsafeツールがありません');
@@ -130,12 +131,7 @@ async function executeWebCases(testCases, settings) {
 
 async function executeApiCases(testCases, settings) {
   const collectionPath = path.resolve(String(settings.collectionPath || ''));
-  const server = {
-    command: process.execPath,
-    args: [path.join(__dirname, 'bruno-mcp-server.mjs')],
-    cwd: settings.runtimeDir,
-    env: serverEnvironment({ MOWRA_BRU_CLI: packageFile('@usebruno/cli', 'bin/bru.js') })
-  };
+  const server = externalServer(settings.brunoMcpCommand, ['--collection', collectionPath], settings);
   return withStdioMcp(server, async (client) => {
     const tools = await client.listTools();
     if (!tools.tools.some((tool) => tool.name === 'execute_request')) throw new Error('Bruno MCPにexecute_requestツールがありません');
