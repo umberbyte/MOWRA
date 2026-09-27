@@ -1,3 +1,5 @@
 node_modules/
 .sites-runtime/
+release/
+.DS_Store
 *.log

@@ -8,7 +8,10 @@
     "start": "electron .",
     "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/source-adapters.cjs && node --check electron/project-format.cjs && node --check electron/analysis-service.cjs && node scripts/check-renderer.cjs",
     "test:formats": "node scripts/test-formats.cjs",
-    "package:win": "electron-packager . MOWRA --platform=win32 --arch=x64 --out=../../outputs --overwrite --ignore=\"^/(?:work|[.]git|[.]openai|scripts)$\""
+    "package:win": "electron-packager . MOWRA --platform=win32 --arch=x64 --out=release --overwrite --icon=mowra-app-icons/win/icon.ico --ignore=\"^/(?:release|work|[.]git|[.]openai|scripts)$\"",
+    "package:mac": "npm run package:mac:arm64 && npm run package:mac:x64",
+    "package:mac:arm64": "electron-packager . MOWRA --platform=darwin --arch=arm64 --out=release --overwrite --icon=mowra-app-icons/mac/icon.icns --ignore=\"^/(?:release|work|[.]git|[.]openai|scripts)$\"",
+    "package:mac:x64": "electron-packager . MOWRA --platform=darwin --arch=x64 --out=release --overwrite --icon=mowra-app-icons/mac/icon.icns --ignore=\"^/(?:release|work|[.]git|[.]openai|scripts)$\""
   },
   "devDependencies": {
     "@electron/packager": "^19.0.1",

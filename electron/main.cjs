@@ -51,6 +51,7 @@ function createWindow({ smokeTest = false } = {}) {
     height: 920,
     minWidth: 960,
     minHeight: 680,
+    icon: path.join(appRoot, 'mowra-app-icons', 'png', 'icon_1024x1024.png'),
     backgroundColor: '#f4f6f2',
     show: false,
     title: 'MOWRA — テスト観点設計',
