@@ -31,6 +31,29 @@ function lookupOnPath(command) {
   });
 }
 
+function capture(command, args) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, { windowsHide: true, shell: false });
+    let stdout = '';
+    const timer = setTimeout(() => { child.kill(); resolve(null); }, 10_000);
+    child.stdout?.on('data', (chunk) => { stdout += chunk; });
+    child.on('error', () => { clearTimeout(timer); resolve(null); });
+    child.on('close', (code) => { clearTimeout(timer); resolve(code === 0 ? stdout : null); });
+  });
+}
+
+async function resolveCodexMcp(name, codexCommand) {
+  if (!codexCommand) return null;
+  const output = await capture(codexCommand, ['mcp', 'get', name, '--json']);
+  if (!output) return null;
+  try {
+    const config = JSON.parse(output);
+    const transport = config.enabled !== false && config.transport?.type === 'stdio' ? config.transport : null;
+    if (!transport?.command) return null;
+    return { command: transport.command, args: transport.args || [], env: transport.env || {}, cwd: transport.cwd || null };
+  } catch { return null; }
+}
+
 async function resolveCliCommand(command, env = process.env) {
   if (process.platform === 'win32') {
     const candidate = windowsCandidates(command, env).find((value) => value && fs.existsSync(value));
@@ -39,4 +62,4 @@ async function resolveCliCommand(command, env = process.env) {
   return lookupOnPath(command);
 }
 
-module.exports = { resolveCliCommand, windowsCandidates };
+module.exports = { resolveCliCommand, resolveCodexMcp, windowsCandidates };

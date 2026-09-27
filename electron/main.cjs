@@ -2,7 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const { sourceAdapters, ALLOWED_EXTENSIONS } = require('./source-adapters.cjs');
-const { resolveCliCommand } = require('./cli-resolver.cjs');
+const { resolveCliCommand, resolveCodexMcp } = require('./cli-resolver.cjs');
 const { analyzeDocuments } = require('./analysis-service.cjs');
 const { generateTestCases } = require('./test-case-service.cjs');
 const { executeAutomation } = require('./automation-service.cjs');
@@ -209,14 +209,21 @@ ipcMain.handle('ai:generate-test-cases', async (_event, request) => generateTest
 }));
 
 ipcMain.handle('automation:execute', async (_event, request) => {
-  const playwrightMcpCommand = await resolveCliCommand('playwright-mcp');
-  const brunoMcpCommand = await resolveCliCommand('bruno-mcp');
+  const codexCommand = await resolveCliCommand('codex');
+  const configuredPlaywright = await resolveCodexMcp('playwright', codexCommand);
+  const configuredBruno = await resolveCodexMcp('bruno', codexCommand);
+  const playwrightMcpCommand = configuredPlaywright?.command || await resolveCliCommand('playwright-mcp');
+  const brunoMcpCommand = configuredBruno?.command || await resolveCliCommand('bruno-mcp');
   const bruCommand = await resolveCliCommand('bru');
   const externalBinPath = [playwrightMcpCommand, brunoMcpCommand, bruCommand]
     .filter(Boolean).map((value) => path.dirname(value)).join(path.delimiter);
   return executeAutomation({
     ...request,
-    settings: { ...(request.settings || {}), playwrightMcpCommand, brunoMcpCommand, externalBinPath }
+    settings: {
+      ...(request.settings || {}), playwrightMcpCommand, brunoMcpCommand, externalBinPath,
+      playwrightMcpArgs: configuredPlaywright?.args || [], playwrightMcpEnv: configuredPlaywright?.env || {}, playwrightMcpCwd: configuredPlaywright?.cwd,
+      brunoMcpArgs: configuredBruno?.args || [], brunoMcpEnv: configuredBruno?.env || {}, brunoMcpCwd: configuredBruno?.cwd
+    }
   }, { userDataPath: app.getPath('userData') });
 });
 

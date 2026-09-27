@@ -5,14 +5,15 @@ function serverEnvironment(extra = {}) {
   return { ...process.env, ELECTRON_RUN_AS_NODE: '1', ...extra };
 }
 
-function externalServer(command, args, settings) {
-  if (!command) throw new Error('外部MCPサーバーが見つかりません。PCへのインストールとPATHを確認してください');
-  const env = serverEnvironment(settings.externalBinPath ? { PATH: `${settings.externalBinPath}${path.delimiter}${process.env.PATH || ''}` } : {});
+function externalServer(command, args, settings, label, configuredEnv = {}, configuredCwd = null) {
+  if (!command) throw new Error(`${label}が見つかりません。CodexのMCP登録またはPCのPATHを確認してください`);
+  const pathEnv = settings.externalBinPath ? { PATH: `${settings.externalBinPath}${path.delimiter}${process.env.PATH || ''}` } : {};
+  const env = serverEnvironment({ ...configuredEnv, ...pathEnv });
   if (process.platform === 'win32' && /\.(cmd|bat)$/i.test(command)) {
     const quote = (value) => `"${String(value).replace(/"/g, '""')}"`;
-    return { command: process.env.ComSpec || 'cmd.exe', args: ['/d', '/s', '/c', [quote(command), ...args.map(quote)].join(' ')], cwd: settings.runtimeDir, env };
+    return { command: process.env.ComSpec || 'cmd.exe', args: ['/d', '/s', '/c', [quote(command), ...args.map(quote)].join(' ')], cwd: configuredCwd || settings.runtimeDir, env };
   }
-  return { command, args, cwd: settings.runtimeDir, env };
+  return { command, args, cwd: configuredCwd || settings.runtimeDir, env };
 }
 
 function parseQuoted(value) {
@@ -47,10 +48,12 @@ function validateAutomationCase(testCase, settings = {}) {
   const reasons = [];
   if (type === 'manual') reasons.push('手動ケースです');
   if (type === 'api') {
+    if (Object.hasOwn(settings, 'brunoMcpCommand') && !settings.brunoMcpCommand) reasons.push('Bruno MCPがCodex設定またはPATHに見つかりません');
     if (!settings.collectionPath) reasons.push('Brunoコレクションが未設定です');
     if (!testCase.brunoRequestPath || /^要確認\s*[:：]/.test(testCase.brunoRequestPath)) reasons.push('Brunoリクエスト相対パスが未設定です');
   }
   if (type === 'web') {
+    if (Object.hasOwn(settings, 'playwrightMcpCommand') && !settings.playwrightMcpCommand) reasons.push('Playwright MCPがCodex設定またはPATHに見つかりません');
     if (!/^https?:\/\//i.test(String(settings.targetUrl || ''))) reasons.push('http/httpsの対象URLが未設定です');
     if (!testCase.steps?.length) reasons.push('テスト手順がありません');
     (testCase.steps || []).forEach((step, index) => {
@@ -111,7 +114,7 @@ function summarizeToolResult(result) {
 async function executeWebCases(testCases, settings) {
   const targetUrl = String(settings.targetUrl || '');
   if (!/^https?:\/\//i.test(targetUrl)) throw new Error('Webテストにはhttp/httpsの対象URLが必要です');
-  const server = externalServer(settings.playwrightMcpCommand, ['--headless', '--isolated', '--browser', settings.browser || 'msedge'], settings);
+  const server = externalServer(settings.playwrightMcpCommand, [...(settings.playwrightMcpArgs || []), '--headless', '--isolated', '--browser', settings.browser || 'msedge'], settings, 'Playwright MCP', settings.playwrightMcpEnv, settings.playwrightMcpCwd);
   return withStdioMcp(server, async (client) => {
     const tools = await client.listTools();
     if (!tools.tools.some((tool) => tool.name === 'browser_run_code_unsafe')) throw new Error('Playwright MCPにbrowser_run_code_unsafeツールがありません');
@@ -131,7 +134,7 @@ async function executeWebCases(testCases, settings) {
 
 async function executeApiCases(testCases, settings) {
   const collectionPath = path.resolve(String(settings.collectionPath || ''));
-  const server = externalServer(settings.brunoMcpCommand, ['--collection', collectionPath], settings);
+  const server = externalServer(settings.brunoMcpCommand, [...(settings.brunoMcpArgs || []), '--collection', collectionPath], settings, 'Bruno MCP', settings.brunoMcpEnv, settings.brunoMcpCwd);
   return withStdioMcp(server, async (client) => {
     const tools = await client.listTools();
     if (!tools.tools.some((tool) => tool.name === 'execute_request')) throw new Error('Bruno MCPにexecute_requestツールがありません');
