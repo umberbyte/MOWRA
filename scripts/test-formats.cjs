@@ -61,6 +61,7 @@ async function run() {
   });
   assert.match(prompt, /<customer-document[^>]+顧客仕様\.html[^>]*>[\s\S]*案件固有要件/);
   assert.match(prompt, /<company-reference[^>]+社内観点集\.pdf[^>]*>[\s\S]*再利用する観点/);
+  assert.match(prompt, /標準観点集等の自社ドキュメント/);
   assert.match(prompt, /当該案件の仕様や合意事項とはみなさない/);
 
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'scopecraft-formats-'));

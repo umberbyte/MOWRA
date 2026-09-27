@@ -149,7 +149,7 @@ ipcMain.handle('files:select', () => selectDocumentFiles({
 }));
 
 ipcMain.handle('files:select-reference', () => selectDocumentFiles({
-  title: '会社の参考資料を選択', filterName: '対応する参考資料'
+  title: '標準観点集等の自社ドキュメントを選択', filterName: '対応する自社ドキュメント'
 }));
 
 function commandAvailable(command) {
