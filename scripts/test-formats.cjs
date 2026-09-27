@@ -8,7 +8,7 @@ const { serializeProject, deserializeProject } = require('../electron/project-fo
 const { sourceAdapters } = require('../electron/source-adapters.cjs');
 const { buildPrompt, compactText, CUSTOMER_PROMPT_BUDGET, REFERENCE_PROMPT_BUDGET, MAX_VIEWPOINTS } = require('../electron/analysis-service.cjs');
 const { generateTestCases, buildTestCasePrompt, normalizeTestCaseResult, FAST_BATCH_SIZE } = require('../electron/test-case-service.cjs');
-const { locatorCode, buildPlaywrightCode } = require('../electron/automation-service.cjs');
+const { executeAutomation, validateAutomationCase, locatorCode, buildPlaywrightCode } = require('../electron/automation-service.cjs');
 
 function writeMinimalPdf(filePath) {
   const objects = [
@@ -109,6 +109,17 @@ async function run() {
   assert.equal(batched.testCases.length, 20);
   assert.match(locatorCode("getByRole('button', { name: '送信', exact: true })"), /page\.getByRole/);
   assert.throws(() => locatorCode('button'), /未対応/);
+  assert.equal(validateAutomationCase(sample.testCases[0], { targetUrl: sample.targetUrl }).runnable, true);
+  const unresolvedCase = JSON.parse(JSON.stringify(sample.testCases[0]));
+  unresolvedCase.steps[0].actionLocator = '要確認: 操作対象を一意にする情報';
+  unresolvedCase.steps[0].operation = 'none';
+  const unresolvedValidation = validateAutomationCase(unresolvedCase, { targetUrl: sample.targetUrl });
+  assert.equal(unresolvedValidation.runnable, false);
+  assert.match(unresolvedValidation.reasons.join(' '), /操作ロケーター/);
+  const blockedResults = await executeAutomation({ testCases: [{ ...unresolvedCase, state: 'agreed' }], settings: { targetUrl: sample.targetUrl } }, { userDataPath: os.tmpdir() });
+  assert.equal(blockedResults.length, 1);
+  assert.equal(blockedResults[0].status, 'blocked');
+  assert.match(blockedResults[0].summary, /未確定/);
   const playwrightCode = buildPlaywrightCode({ ...sample.testCases[0], state: 'agreed' }, 'https://example.jp');
   assert.match(playwrightCode, /actionCount !== 1/);
   assert.match(playwrightCode, /await actionTarget\.click/);

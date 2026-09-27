@@ -33,6 +33,44 @@ function inferOperation(step) {
   return 'none';
 }
 
+const WEB_OPERATIONS = new Set(['click', 'fill', 'check', 'press', 'select']);
+const WEB_ASSERTIONS = new Set(['visible', 'text', 'value']);
+
+function validateAutomationCase(testCase, settings = {}) {
+  const type = testCase.automationType || 'web';
+  const reasons = [];
+  if (type === 'manual') reasons.push('手動ケースです');
+  if (type === 'api') {
+    if (!settings.collectionPath) reasons.push('Brunoコレクションが未設定です');
+    if (!testCase.brunoRequestPath || /^要確認\s*[:：]/.test(testCase.brunoRequestPath)) reasons.push('Brunoリクエスト相対パスが未設定です');
+  }
+  if (type === 'web') {
+    if (!/^https?:\/\//i.test(String(settings.targetUrl || ''))) reasons.push('http/httpsの対象URLが未設定です');
+    if (!testCase.steps?.length) reasons.push('テスト手順がありません');
+    (testCase.steps || []).forEach((step, index) => {
+      const prefix = `手順${index + 1}`;
+      try { locatorCode(step.actionLocator || ''); } catch { reasons.push(`${prefix}の操作ロケーターが未確定です`); }
+      try { locatorCode(step.expectedLocator || ''); } catch { reasons.push(`${prefix}の確認ロケーターが未確定です`); }
+      const operation = inferOperation(step);
+      if (!WEB_OPERATIONS.has(operation)) reasons.push(`${prefix}の操作種別が未設定です`);
+      if (['fill', 'press', 'select'].includes(operation) && !String(step.actionValue || testCase.testData || '').trim()) reasons.push(`${prefix}の操作値が未設定です`);
+      if (!WEB_ASSERTIONS.has(step.assertion || '')) reasons.push(`${prefix}の検証種別が未設定です`);
+      if (['text', 'value'].includes(step.assertion) && !String(step.expectedValue || '').trim()) reasons.push(`${prefix}の期待値が未設定です`);
+    });
+  }
+  return { runnable: reasons.length === 0, reasons: [...new Set(reasons)] };
+}
+
+function blockedResult(testCase, settings) {
+  const validation = validateAutomationCase(testCase, settings);
+  return {
+    testCaseId: testCase.id,
+    engine: (testCase.automationType || 'web') === 'api' ? 'bruno-mcp' : 'playwright-mcp',
+    status: 'blocked', durationMs: 0,
+    summary: validation.reasons.join(' / '), details: '', runAt: new Date().toISOString()
+  };
+}
+
 function buildPlaywrightCode(testCase, targetUrl) {
   const lines = [
     'async (page) => {',
@@ -119,14 +157,17 @@ async function executeApiCases(testCases, settings) {
 
 async function executeAutomation(request, runtime) {
   const agreed = (request.testCases || []).filter((item) => item.state === 'agreed');
-  const webCases = agreed.filter((item) => (item.automationType || 'web') === 'web');
-  const apiCases = agreed.filter((item) => item.automationType === 'api');
-  if (!webCases.length && !apiCases.length) throw new Error('実行可能な合意済みWeb/APIケースがありません');
   const settings = { ...(request.settings || {}), runtimeDir: runtime.userDataPath };
-  const results = [];
+  const automatable = agreed.filter((item) => ['web', 'api'].includes(item.automationType || 'web'));
+  const blocked = automatable.filter((item) => !validateAutomationCase(item, settings).runnable);
+  const runnable = automatable.filter((item) => validateAutomationCase(item, settings).runnable);
+  const webCases = runnable.filter((item) => (item.automationType || 'web') === 'web');
+  const apiCases = runnable.filter((item) => item.automationType === 'api');
+  if (!automatable.length) throw new Error('合意済みWeb/APIケースがありません');
+  const results = blocked.map((item) => blockedResult(item, settings));
   if (webCases.length) results.push(...await executeWebCases(webCases, settings));
   if (apiCases.length) results.push(...await executeApiCases(apiCases, settings));
   return results;
 }
 
-module.exports = { executeAutomation, executeWebCases, executeApiCases, locatorCode, buildPlaywrightCode };
+module.exports = { executeAutomation, executeWebCases, executeApiCases, validateAutomationCase, locatorCode, buildPlaywrightCode };
