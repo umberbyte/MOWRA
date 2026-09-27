@@ -6,6 +6,7 @@ const XLSX = require('xlsx');
 const { zipSync, strToU8 } = require('fflate');
 const { serializeProject, deserializeProject } = require('../electron/project-format.cjs');
 const { sourceAdapters } = require('../electron/source-adapters.cjs');
+const { buildPrompt } = require('../electron/analysis-service.cjs');
 
 function writeMinimalPdf(filePath) {
   const objects = [
@@ -45,6 +46,7 @@ async function run() {
     focus: 'general', filter: 'review', aiProvider: 'codex', context: '顧客の説明\n2行目',
     sources: ['現行画面', 'UX指針'],
     inputFiles: [{ id: 'f1', name: '仕様.xlsx', path: 'C:\\案件\\仕様.xlsx', extension: '.xlsx', size: 123, sourceType: 'local-file' }],
+    referenceFiles: [{ id: 'r1', name: '社内観点集.pdf', path: 'C:\\標準\\社内観点集.pdf', extension: '.pdf', size: 456, sourceType: 'local-file' }],
     items: [{ id: 'VP-001', target: '画面', title: '操作 & 応答', description: '期待どおり', basis: 'UX指針', priority: '高', state: 'review', question: '確認？' }],
     analysisSummary: '要約', analysisQuestions: ['質問1', '質問2']
   };
@@ -52,6 +54,14 @@ async function run() {
   assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
   assert.match(xml, /<testprj version="1\.0">/);
   assert.deepEqual(deserializeProject(xml), sample);
+  const prompt = buildPrompt({
+    customerDocuments: [{ name: '顧客仕様.html', content: '案件固有要件' }],
+    referenceDocuments: [{ name: '社内観点集.pdf', content: '再利用する観点' }],
+    project: sample
+  });
+  assert.match(prompt, /<customer-document[^>]+顧客仕様\.html[^>]*>[\s\S]*案件固有要件/);
+  assert.match(prompt, /<company-reference[^>]+社内観点集\.pdf[^>]*>[\s\S]*再利用する観点/);
+  assert.match(prompt, /当該案件の仕様や合意事項とはみなさない/);
 
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'scopecraft-formats-'));
   try {

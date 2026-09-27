@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('desktopBridge', Object.freeze({
   exportCsv: (payload) => ipcRenderer.invoke('project:export-csv', payload),
   listSources: () => ipcRenderer.invoke('sources:list'),
   selectFiles: () => ipcRenderer.invoke('files:select'),
+  selectReferenceFiles: () => ipcRenderer.invoke('files:select-reference'),
   getAiCapabilities: () => ipcRenderer.invoke('ai:capabilities'),
   analyzeFiles: (request) => ipcRenderer.invoke('ai:analyze-files', request)
 }));

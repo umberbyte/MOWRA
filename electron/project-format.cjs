@@ -4,6 +4,7 @@ const PROJECT_FORMAT_VERSION = '1.0';
 const ARRAY_PATHS = new Set([
   'testprj.sources.source',
   'testprj.inputFiles.file',
+  'testprj.referenceFiles.file',
   'testprj.viewpoints.viewpoint',
   'testprj.analysis.questions.question'
 ]);
@@ -28,6 +29,16 @@ function serializeProject(project = {}) {
       sources: { source: (project.sources || []).map((source) => ({ '#text': text(source) })) },
       inputFiles: {
         file: (project.inputFiles || []).map((file) => ({
+          '@_id': text(file.id),
+          '@_extension': text(file.extension),
+          '@_size': Number(file.size) || 0,
+          '@_sourceType': text(file.sourceType || 'local-file'),
+          name: text(file.name),
+          path: text(file.path)
+        }))
+      },
+      referenceFiles: {
+        file: (project.referenceFiles || []).map((file) => ({
           '@_id': text(file.id),
           '@_extension': text(file.extension),
           '@_size': Number(file.size) || 0,
@@ -84,6 +95,11 @@ function deserializeProject(xml) {
     context: nodeText(project.context),
     sources: (root.sources?.source || []).map(nodeText),
     inputFiles: (root.inputFiles?.file || []).map((file) => ({
+      id: text(file['@_id']), name: nodeText(file.name), path: nodeText(file.path),
+      extension: text(file['@_extension']), size: Number(file['@_size']) || 0,
+      sourceType: text(file['@_sourceType']) || 'local-file'
+    })),
+    referenceFiles: (root.referenceFiles?.file || []).map((file) => ({
       id: text(file['@_id']), name: nodeText(file.name), path: nodeText(file.path),
       extension: text(file['@_extension']), size: Number(file['@_size']) || 0,
       sourceType: text(file['@_sourceType']) || 'local-file'

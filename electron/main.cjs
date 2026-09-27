@@ -74,12 +74,13 @@ function createWindow({ smokeTest = false } = {}) {
         const result = await window.webContents.executeJavaScript(`new Promise((resolve) => setTimeout(() => resolve({
           bridge: Boolean(window.desktopBridge && window.desktopBridge.isElectron),
           filePicker: typeof window.desktopBridge?.selectFiles === 'function',
+          referencePicker: typeof window.desktopBridge?.selectReferenceFiles === 'function',
           analyzer: typeof window.desktopBridge?.analyzeFiles === 'function',
           title: document.title,
           providerStatus: document.querySelector('#providerStatus')?.textContent || ''
         }), 400))`);
         console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
-        app.exit(result.bridge && result.filePicker && result.analyzer ? 0 : 1);
+        app.exit(result.bridge && result.filePicker && result.referencePicker && result.analyzer ? 0 : 1);
       } catch (error) {
         console.error('SMOKE_TEST_FAILED', error);
         app.exit(1);
@@ -130,18 +131,26 @@ ipcMain.handle('project:export-csv', async (_event, payload) => {
 
 ipcMain.handle('sources:list', () => Object.values(sourceAdapters).map(({ id, label, available, reason }) => ({ id, label, available, reason })));
 
-ipcMain.handle('files:select', async () => {
+async function selectDocumentFiles({ title, filterName }) {
   const result = await dialog.showOpenDialog({
-    title: '分析する顧客資料を選択',
+    title,
     properties: ['openFile', 'multiSelections'],
     filters: [
-      { name: '対応する顧客資料', extensions: [...ALLOWED_EXTENSIONS].map((value) => value.slice(1)) },
+      { name: filterName, extensions: [...ALLOWED_EXTENSIONS].map((value) => value.slice(1)) },
       { name: 'すべてのファイル', extensions: ['*'] }
     ]
   });
   if (result.canceled) return [];
   return sourceAdapters.local.describe(result.filePaths);
-});
+}
+
+ipcMain.handle('files:select', () => selectDocumentFiles({
+  title: '分析する顧客資料を選択', filterName: '対応する顧客資料'
+}));
+
+ipcMain.handle('files:select-reference', () => selectDocumentFiles({
+  title: '会社の参考資料を選択', filterName: '対応する参考資料'
+}));
 
 function commandAvailable(command) {
   return new Promise((resolve) => {
